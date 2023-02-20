@@ -40,8 +40,11 @@ app.config['JWT_SECRET_KEY'] = "Eliottana"
 jwt = JWTManager(app)
 db = SQLAlchemy(app)
 
-# ----------------------------------------------------------------------------
+# -------------------------------------DATABASE START-------------------------------------
 
+# --------------------------------------DATABASE END--------------------------------------
+
+# ______________________________
 # ---------- Homepage ---------- 
 @app.route("/", methods=["GET"])
 def home_page():
@@ -52,6 +55,7 @@ def home_page():
     """
     pass
 
+# _________________________________________
 # ---------- User authentication ---------- 
 @app.route("/login", methods=["POST"])
 def login_page():
@@ -91,6 +95,7 @@ def logout_process_page():
     """
     pass 
 
+# __________________________________
 # ---------- User profile ---------- 
 @app.route("/profile", methods=["GET"])
 def profile_page():
@@ -108,6 +113,7 @@ def profile_process_page():
     """
     pass
 
+# _____________________________________
 # ---------- Book management ---------- 
 @app.route("/sell", methods=["GET"])
 def add_listing_page():
@@ -148,6 +154,7 @@ def delete_listing_page():
     """
     pass
 
+# ______________________________
 # ---------- Chatting ---------- 
 @app.route("/messages", methods=["GET"])
 def all_chat_page():
