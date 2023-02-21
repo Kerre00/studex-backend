@@ -42,15 +42,15 @@ db = SQLAlchemy(app)
 
 # -------------------------------------DATABASE START-------------------------------------
 
-book_course = db.Table("read_by",
+book_course = db.Table("listing_course",
     db.Column("listing_id", db.Integer, db.ForeignKey("listing.id"), primary_key=True),
     db.Column("course_id", db.String(12), db.ForeignKey("course.id"), primary_key=True))
 
-book_category = db.Table("read_by",
+book_category = db.Table("listing_category",
     db.Column("listing_id", db.Integer, db.ForeignKey("listing.id"), primary_key=True),
     db.Column("category_id", db.String(12), db.ForeignKey("category.id"), primary_key=True))
 
-book_program = db.Table("read_by",
+book_program = db.Table("listing_program",
     db.Column("listing_id", db.Integer, db.ForeignKey("listing.id"), primary_key=True),
     db.Column("program_id", db.String(12), db.ForeignKey("program.id"), primary_key=True))
 
@@ -63,7 +63,7 @@ class User(db.Model):
     first_name = db.Column(db.String(50), nullable=True)
     last_name = db.Column(db.String(50), nullable=True)
     created_at = db.Column(db.DateTime, nullable=False, default=db.func.now())
-    phone_number = db.Column(db.String(30), nullable=True)
+    phone_number = db.Column(db.String(30), nullable=True, unique=True)
 
     def __init__(self, username, password, email, first_name, last_name):
         

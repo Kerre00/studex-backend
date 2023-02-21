@@ -59,11 +59,16 @@ def signup_page():
         phone_number=data["phone_number"])
         existing_username = User.query.filter_by(name=new_user.username).first()
         existing_email = User.query.filter_by(email=new_user.email).first()
-        if not existing_username and not existing_email:
-            db.session.add(new_user)
-            db.session.commit()
-            return "", 200
-        return jsonify("ERROR: Username already exists."), 400
+        existing_phonum = User.query.filter_by(phone_number=new_user.phone_number).first()
+        if existing_username:
+            return jsonify("ERROR: Username already exists."), 400
+        if existing_email: 
+            return jsonify("ERROR: Email is already used."), 400
+        if existing_phonum and existing_phonum != None:
+            return jsonify("ERROR: Phone number is already used."), 400
+        db.session.add(new_user)
+        db.session.commit()
+        return redirect("/login", 200, jsonify({"message": "Successfully signed up"}))
 
 
 @app.route("/logout", methods=["POST"])
@@ -94,14 +99,36 @@ def profile_page():
     if not user:
         return redirect("/login")
     if request.method == "POST":
-        name = request.form["name"]
-        email = request.form["email"]
-        password = request.form["password"]
-        user.name = name
+        data = request.get_json()
+        name = data["username"]
+        email = data["email"]
+        password = data["password"]
+        
+        try:
+            phone_number = data["phone_number"]
+        except:
+            phone_number = None
+        try:
+            first_name = data["first_name"]
+        except:
+            first_name = None
+        try:
+            last_name = data["last_name"]
+        except:
+            last_name = None
+
+        user.username = name
         user.email = email
-        user.set_password(password)
+        user.password = password
+        user.phone_number = phone_number
+        user.first_name = first_name
+        user.last_name = last_name
+        
         db.session.commit()
         return jsonify({"message": "Profile updated successfully"}), 200
+    else:
+        pass
+        # return tamplate
 
 # _________________________________________
 # ---------- Listings management ---------- 
@@ -127,7 +154,7 @@ def add_listing_page():
         # Render display form for adding a new listing
         # return render_template("add_listing.html")
 
-@app.route("/listing/edit/<ListingID>", methods=["GET"])
+@app.route("/listing/edit/<ListingID>", methods=["POST", "GET"])
 @jwt_required()
 def edit_listing_page(listing_id):
     """
@@ -135,14 +162,17 @@ def edit_listing_page(listing_id):
     """
     listing = Listing.query.get(listing_id)
     if request.method == "POST":
-        title = request.form["title"]
-        description = request.form["description"]
-        price = request.form["price"]
-        location = request.form["location"]
+        data = request.get_json()
+        title = data["title"]
+        description = data["description"]
+        price = data["price"]
+        location = data["location"]
+        isbn = data["isbn"]
         listing["title"] = title
         listing["description"] = description
         listing["price"] = price
         listing["location"] = location
+        listing["isbn"] = isbn
         return redirect("/listings")
     else:
         pass
