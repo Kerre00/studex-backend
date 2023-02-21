@@ -42,14 +42,17 @@ db = SQLAlchemy(app)
 
 # -------------------------------------DATABASE START-------------------------------------
 
-# book_category = db.Table("read_by",
-#     db.Column("user_id", db.Integer, db.ForeignKey("user.id"), primary_key=True),
-#     db.Column("message_id", db.String(12), db.ForeignKey("message.id"), primary_key=True)) #------------------------------------------
+book_course = db.Table("read_by",
+    db.Column("listing_id", db.Integer, db.ForeignKey("listing.id"), primary_key=True),
+    db.Column("course_id", db.String(12), db.ForeignKey("course.id"), primary_key=True))
 
+book_category = db.Table("read_by",
+    db.Column("listing_id", db.Integer, db.ForeignKey("listing.id"), primary_key=True),
+    db.Column("category_id", db.String(12), db.ForeignKey("category.id"), primary_key=True))
 
-# read_by = db.Table("read_by",
-#     db.Column("user_id", db.Integer, db.ForeignKey("user.id"), primary_key=True),
-#     db.Column("message_id", db.String(12), db.ForeignKey("message.id"), primary_key=True)) #------------------------------------------
+book_program = db.Table("read_by",
+    db.Column("listing_id", db.Integer, db.ForeignKey("listing.id"), primary_key=True),
+    db.Column("program_id", db.String(12), db.ForeignKey("program.id"), primary_key=True))
 
 
 class User(db.Model):
@@ -60,6 +63,7 @@ class User(db.Model):
     first_name = db.Column(db.String(50), nullable=True)
     last_name = db.Column(db.String(50), nullable=True)
     created_at = db.Column(db.DateTime, nullable=False, default=db.func.now())
+    phone_number = db.Column(db.String(30), nullable=True)
 
     def __init__(self, username, password, email, first_name, last_name):
         
@@ -134,22 +138,21 @@ class Listing(db.Model):
     isbn = db.Column(db.String(17), nullable=True)
     seller_id = db.Column(db.String(12), db.ForeignKey('user.id'), nullable=False)
     created_at = db.Column(db.DateTime, nullable=False, default=db.func.now())
-       
 
 
-# class Category(db.Model):
-#     id = db.Column(db.Integer, primary_key=True)
-#     name = db.Column(db.String(60), unique=True)
+class Category(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(80), unique=True)
 
 
-# class Course(db.Model):
-#     id = db.Column(db.Integer, primary_key=True)
-#     name = db.Column(db.String(60), unique=True)
+class Course(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(80), unique=True)
 
 
-# class Program(db.Model):
-#     id = db.Column(db.Integer, primary_key=True)
-#     name = db.Column(db.String(60), unique=True)
+class Program(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(80), unique=True)
 
 
 class TokenBlocklist(db.Model):

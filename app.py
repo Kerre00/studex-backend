@@ -1,4 +1,4 @@
-from flask import Flask, request, jsonify
+from flask import Flask, request, jsonify, redirect
 from flask_sqlalchemy import SQLAlchemy
 from flask_bcrypt import Bcrypt
 from datetime import timezone, datetime, timedelta
@@ -16,6 +16,7 @@ def check_if_token_revoked(jwt_header, jwt_payload: dict) -> bool:
 # ______________________________
 # ---------- Homepage ---------- 
 @app.route("/", methods=["GET"])
+@jwt_required(optional=True)
 def home_page():
     """
     The main page of the application where users can view the
@@ -46,15 +47,6 @@ def login_page():
     return jsonify({"message": "Invalid password"}), 400
 
 
-@app.route("/login", methods=["GET"])
-def login_process_page():
-    """
-    The route that processes the user's login credentials and 
-    logs them in.
-    """
-    pass
-
-
 @app.route("/signup", methods=["POST"])
 def signup_page():
     """
@@ -63,7 +55,8 @@ def signup_page():
     if request.method == "POST":
         data = request.get_json()
         new_user = User(username=data["username"], password=data["password"],
-        email=data["email"], first_name=data["first_name"], last_name=data["last_name"])
+        email=data["email"], first_name=data["first_name"], last_name=data["last_name"], 
+        phone_number=data["phone_number"])
         existing_username = User.query.filter_by(name=new_user.username).first()
         existing_email = User.query.filter_by(email=new_user.email).first()
         if not existing_username and not existing_email:
@@ -71,16 +64,6 @@ def signup_page():
             db.session.commit()
             return "", 200
         return jsonify("ERROR: Username already exists."), 400
-
-
-
-@app.route("/signup", methods=["GET"])
-def signup_process_page():
-    """
-    The route that processes the user's sign up information 
-    and creates a new account in the database.
-    """
-    pass
 
 
 @app.route("/logout", methods=["POST"])
@@ -94,90 +77,78 @@ def logout_page():
     now = datetime.now(timezone.utc)
     db.session.add(TokenBlocklist(jti=jti, revoked_at=now))
     db.session.commit()
-    return jsonify({'message': 'Successfully logged out'}), 200
-
-
-@app.route("/logout", methods=["GET"])
-@jwt_required()
-def logout_process_page():
-    """
-    The route that processes the user's log out credentials 
-    and logs them out.
-    """ 
-    pass
+    # return jsonify({"message": "Successfully logged out"}), 200
+    return redirect("/", 200, jsonify({"message": "Successfully logged out"}))
 
 # __________________________________
 # ---------- User profile ----------
  
-@app.route("/profile", methods=["GET"])
+@app.route("/profile", methods=["GET", "POST"])
 @jwt_required()
 def profile_page():
     """
     The page where users can view and edit their profile
     information.
     """
-    pass
+    user = get_jwt_identity()
+    if not user:
+        return redirect("/login")
+    if request.method == "POST":
+        name = request.form["name"]
+        email = request.form["email"]
+        password = request.form["password"]
+        user.name = name
+        user.email = email
+        user.set_password(password)
+        db.session.commit()
+        return jsonify({"message": "Profile updated successfully"}), 200
 
-@app.route("/profile", methods=["POST"])
-@jwt_required()
-def profile_process_page():
-    """
-    The route that processes the user's updated profile
-    information and saves it to the database.
-    """
-    pass
+# _________________________________________
+# ---------- Listings management ---------- 
 
-# _____________________________________
-# ---------- Book management ---------- 
-
-@app.route("/sell", methods=["POST"])
+@app.route("/listing/add", methods=["POST", "GET"])
 @jwt_required()
 def add_listing_page():
     """
     The page where users can create a new book listing
     for sale.
     """
-    data = request.get_json()
-    user = get_jwt_identity()
-    new_listing = Listing(
-        title=data["title"], price=data["price"], location=data["location"],
-        description=data["description"], isbn=data["isbn"], seller_id=user)
-    db.session.add(new_listing)
-    db.session.commit()
-    return jsonify({'message': 'Listing has been posted'}), 200
+    if request.method == "POST":
+        data = request.get_json()
+        user = get_jwt_identity()
+        new_listing = Listing(
+            title=data["title"], price=data["price"], location=data["location"],
+            description=data["description"], isbn=data["isbn"], seller_id=user)
+        db.session.add(new_listing)
+        db.session.commit()
+        return jsonify({"message": "Listing has been posted"}), 200
+    else:
+        pass
+        # Render display form for adding a new listing
+        # return render_template("add_listing.html")
 
-
-@app.route("/sell", methods=["GET"])
+@app.route("/listing/edit/<ListingID>", methods=["GET"])
 @jwt_required()
-def add_listing_process_page():
-    """
-    The route that processes the book information and 
-    saves it to the database as a new listing.
-    """
-    pass
-   
-
-
-@app.route("/edit/int:book_id", methods=["GET"])
-@jwt_required()
-def edit_listing_page():
+def edit_listing_page(listing_id):
     """
     The page where users can edit an existing book listing.
     """
-    pass
+    listing = Listing.query.get(listing_id)
+    if request.method == "POST":
+        title = request.form["title"]
+        description = request.form["description"]
+        price = request.form["price"]
+        location = request.form["location"]
+        listing["title"] = title
+        listing["description"] = description
+        listing["price"] = price
+        listing["location"] = location
+        return redirect("/listings")
+    else:
+        pass
+        #template for editing listing
 
-
-@app.route("/edit/int:book_id", methods=["POST"])
-@jwt_required()
-def edit_listing_process_page():
-    """
-    The route that processes the updated book information 
-    and saves it to the database.
-    """
-    pass
-
-
-@app.route("/delete/<ListingID>", methods=["GET"])
+@app.route("/listing/delete/<ListingID>", methods=["GET"])
 @jwt_required()
 def delete_listing_page(ListingID):
     """
@@ -195,7 +166,7 @@ def delete_listing_page(ListingID):
 # ______________________________
 # ---------- Chatting ---------- 
 
-@app.route("/messages", methods=["GET"])
+@app.route("/messages/all", methods=["GET"])
 @jwt_required()
 def all_chats_page():
     """
@@ -205,8 +176,8 @@ def all_chats_page():
     user = get_jwt_identity()
     chats = Chat.query.filter_by(buyer_id=user)
     chats =+ Chat.query.filter_by(seller_id=user)
-    return jsonify([{'messages': chat.messages, 'id': chat.id, 'listing': chat.listing, 
-    'buyer': chat.buyer, 'seller': chat.seller} for chat in chats]) # Borde va säljaren, titel på listing, bild på listing, senaste meddelandet och dess tid.
+    return jsonify([{"messages": chat.messages, "id": chat.id, "listing": chat.listing, 
+    "buyer": chat.buyer, "seller": chat.seller} for chat in chats]) # Borde va säljaren, titel på listing, bild på listing, senaste meddelandet och dess tid.
     # , "read_by": [user.name for user in message.readers]
 
 
@@ -217,24 +188,9 @@ def chat_page():
     """
     The page where users can chat with another user.
     """
-    selected_chat_id = request.get_json()['chat_id']
+    selected_chat_id = request.get_json()["chat_id"]
     messages = Message.query.filter_by(chat_id=selected_chat_id).all()
     return jsonify([message.message for message in messages])
-
-
-@app.route("/messages/int:user_id", methods=["GET"])
-@jwt_required()
-def chat_process_page():
-    """
-    The route that processes the user's message and 
-    saves it to the database.
-    """
-    # data = request.get_json()
-    # new_message = Message(message=data["message"], author=get_jwt_identity())
-    # db.session.add(new_message)
-    # db.session.commit()
-    # return jsonify({"id": new_message.id}) 
-    pass
 
 # # ----------------------------------------------------------------------------
 
@@ -246,3 +202,4 @@ if __name__ == "__main__":
 # TODO: Possibility to log in with email, Google, LiuID???
 # TODO: Add phonenumber to User table
 # TODO: Add student.liu.se to email verification?
+# TODO: Add all templates (eg: view_listing_page)
