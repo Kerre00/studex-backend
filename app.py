@@ -7,6 +7,7 @@ from flask_jwt_extended import (
 JWTManager, jwt_required, create_access_token, get_jwt, get_jwt_identity
 )
 
+@app.before_request
 @jwt.token_in_blocklist_loader
 def check_if_token_revoked(jwt_header, jwt_payload: dict) -> bool:
     jti = jwt_payload["jti"]
@@ -52,23 +53,23 @@ def signup_page():
     """
     The page where users can sign up for a new account.
     """
-    if request.method == "POST":
-        data = request.get_json()
-        new_user = User(username=data["username"], password=data["password"],
-        email=data["email"], first_name=data["first_name"], last_name=data["last_name"], 
-        phone_number=data["phone_number"])
-        existing_username = User.query.filter_by(name=new_user.username).first()
-        existing_email = User.query.filter_by(email=new_user.email).first()
-        existing_phonum = User.query.filter_by(phone_number=new_user.phone_number).first()
-        if existing_username:
-            return jsonify("ERROR: Username already exists."), 400
-        if existing_email: 
-            return jsonify("ERROR: Email is already used."), 400
-        if existing_phonum and existing_phonum != None:
-            return jsonify("ERROR: Phone number is already used."), 400
-        db.session.add(new_user)
-        db.session.commit()
-        return redirect("/login", 200, jsonify({"message": "Successfully signed up"}))
+    data = request.get_json()
+    existing_username = User.query.filter_by(name=data["username"]).first()
+    existing_email = User.query.filter_by(email=data["email"]).first()
+    existing_phonum = User.query.filter_by(phone_number=data["phone_number"]).first()
+    if existing_username:
+        return jsonify("ERROR: Username already exists."), 400
+    if existing_email: 
+        return jsonify("ERROR: Email is already used."), 400
+    if existing_phonum and existing_phonum != None:
+        return jsonify("ERROR: Phone number is already used."), 400
+    
+    user = User(username=data["username"], password=data["password"],
+    email=data["email"], first_name=data["first_name"], last_name=data["last_name"], 
+    phone_number=data["phone_number"])
+    db.session.add(user)
+    db.session.commit()
+    return redirect("/login", 200, jsonify({"message": "Successfully signed up"}))
 
 
 @app.route("/logout", methods=["POST"])
@@ -146,6 +147,8 @@ def add_listing_page():
         new_listing = Listing(
             title=data["title"], price=data["price"], location=data["location"],
             description=data["description"], isbn=data["isbn"], seller_id=user)
+        if not new_listing:
+            return jsonify("ERROR: Listing could not be created"), 400
         db.session.add(new_listing)
         db.session.commit()
         return jsonify({"message": "Listing has been posted"}), 200
@@ -160,23 +163,30 @@ def edit_listing_page(listing_id):
     """
     The page where users can edit an existing book listing.
     """
+    user = get_jwt_identity()
     listing = Listing.query.get(listing_id)
+    
+    if not listing:
+        return jsonify("ERROR: Listing not found"), 400
+    if listing.seller_id != user.id:
+        return jsonify("ERROR: You are not the owner of this listing"), 400
     if request.method == "POST":
         data = request.get_json()
-        title = data["title"]
-        description = data["description"]
-        price = data["price"]
-        location = data["location"]
-        isbn = data["isbn"]
-        listing["title"] = title
-        listing["description"] = description
-        listing["price"] = price
-        listing["location"] = location
-        listing["isbn"] = isbn
-        return redirect("/listings")
+        try: listing.description = data["description"]
+        except: pass
+        try: listing.location = data["location"]
+        except: pass
+        try: listing.title = data["title"]
+        except: pass
+        try: listing.price = data["price"]
+        except: pass
+        try: listing.isbn = data["isbn"]
+        except: pass    
+        db.session.commit()
+        return redirect("/listing/edit/" + listing_id, 200, jsonify(
+            {"message": "Listing updated successfully"})) # Kan man göras såhär?
     else:
-        pass
-        #template for editing listing
+        return listing
 
 @app.route("/listing/delete/<ListingID>", methods=["GET"])
 @jwt_required()
@@ -205,7 +215,9 @@ def all_chats_page():
     """
     user = get_jwt_identity()
     chats = Chat.query.filter_by(buyer_id=user)
-    chats =+ Chat.query.filter_by(seller_id=user)
+    chats += Chat.query.filter_by(seller_id=user)
+    if not chats:
+        return jsonify({"message": "You have no chats yet."}), 200
     return jsonify([{"messages": chat.messages, "id": chat.id, "listing": chat.listing, 
     "buyer": chat.buyer, "seller": chat.seller} for chat in chats]) # Borde va säljaren, titel på listing, bild på listing, senaste meddelandet och dess tid.
     # , "read_by": [user.name for user in message.readers]
@@ -219,7 +231,11 @@ def chat_page():
     The page where users can chat with another user.
     """
     selected_chat_id = request.get_json()["chat_id"]
+    if not selected_chat_id:
+        return jsonify("ERROR: No chat id was provided."), 400
     messages = Message.query.filter_by(chat_id=selected_chat_id).all()
+    if not messages:
+        return jsonify({"message": "You have no messages yet."}), 200
     return jsonify([message.message for message in messages])
 
 # # ----------------------------------------------------------------------------
@@ -233,3 +249,4 @@ if __name__ == "__main__":
 # TODO: Add phonenumber to User table
 # TODO: Add student.liu.se to email verification?
 # TODO: Add all templates (eg: view_listing_page)
+# TODO: Check if listing is a doplicate?????
