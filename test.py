@@ -1,17 +1,25 @@
-def validate_password(password):
-    if len(password) < 8:
-        raise ValueError("Password must be at least 8 characters long")
-    dig, upp, low = False, False, False
-    for char in password:
-        if char.isdigit():
-            dig = True
-        if char.isupper():
-            upp = True
-        if char.islower():
-            low = True
-    if dig and upp and low:
-        return password
-    raise ValueError("Password must contain: digit, lower and uppercase")
+import requests
+import json
 
+# Get the data from the API
+url = "http://127.0.0.1:5000/"
 
-print(validate_password("hej123123"))
+# Create a new account
+data = {"username": "test", 
+        "password": "test",
+        "email": "test@testmail.com",
+        "phone_number": "1234567890"}
+
+r = requests.post(url + "signup", json=data, verify=False)
+print(r.text)
+
+# Login
+# r2 = requests.post(url + "login", data=data, verify=False)
+# print(r2.text)
+
+# # Get the token
+# token = json.loads(r2.text)["token"]
+
+# # Create a new post
+# data = {"title": "test", "price": "100", "description": "test", "isbn": "1234567890", "location": "test", "description": "test", "token": token}
+# r3 = requests.post(url + "listing/add", data=data, verify=False)
