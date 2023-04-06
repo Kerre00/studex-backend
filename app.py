@@ -99,8 +99,9 @@ def profile_page():
     user = get_jwt_identity()
     if not user:
         return redirect("/login")
-    return jsonify({"username": user.username, "email": user.email, "phone_number": user.phone_number,
-                     "first_name": user.first_name, "last_name": user.last_name}), 200
+    return jsonify(user.serialize())
+    # return jsonify({"username": user.username, "email": user.email, "phone_number": user.phone_number,
+    #                  "first_name": user.first_name, "last_name": user.last_name}), 200
 
 @app.route("/profile", methods=["POST"])
 @jwt_required()
@@ -146,7 +147,7 @@ def delete_profile_page(): #Remove all user content/data
 @jwt_required()
 def add_listing_page():
     """
-    Fcuntion that handles the process of adding a new book listing.
+    Function that handles the process of adding a new book listing.
     """
     user = get_jwt_identity()
     if not user:
@@ -177,22 +178,23 @@ def edit_listing_page(listing_id):
     if listing.seller_id != user.id:
         return jsonify("ERROR: You are not the owner of this listing"), 400
     if request.method == "POST":
-        data = request.get_json()
-        try: listing.description = data["description"]
-        except: pass
-        try: listing.location = data["location"]
-        except: pass
-        try: listing.title = data["title"]
-        except: pass
-        try: listing.price = data["price"]
-        except: pass
-        try: listing.isbn = data["isbn"]
-        except: pass    
+        data = request.get_json()   
+        if data["description"] != None:
+            listing.description = data["description"]
+        if data["location"] != None:
+            listing.location = data["location"]
+        if data["title"] != None:
+            listing.title = data["title"]
+        if data["price"] != None:
+            listing.price = data["price"]
+        if data["isbn"] != None:
+            listing.isbn = data["isbn"]
+
         db.session.commit()
         return redirect("/listing/edit/" + listing_id, 200, jsonify(
-            {"message": "Listing updated successfully"})) # Kan man göras såhär?
-    else:
-        return listing
+            {"message": "Listing updated successfully"}))
+    else: # If method is GET, get the listing 
+        return jsonify(listing.serialize())
 
 @app.route("/listing/delete/<ListingID>", methods=["DELETE"])
 @jwt_required()
@@ -201,7 +203,7 @@ def delete_listing_page(ListingID):
     Function that handles the process of deleting a book listing.
     """
     listing = Listing.query.filter_by(id=ListingID).first()
-    if listing and listing.seller_id == get_jwt_identity():
+    if listing and listing.seller_id == get_jwt_identity(): # Kommer denna jämförelse funka? ger get_jwt_identity() id på en user?
         db.session.delete(listing)
         db.session.commit()
         return "", 200
@@ -211,7 +213,7 @@ def delete_listing_page(ListingID):
 @jwt_required()
 def listing_page(ListingID):
     """
-    Function that handles the process of displaying a book listing.
+    Function that handles the process of getting a book listing.
     """
     listing = Listing.query.filter_by(id=ListingID).first()
     if listing:
@@ -260,8 +262,7 @@ def all_chats_page():
     return jsonify([{"messages": chat.messages, "id": chat.id, "listing": chat.listing, 
     "buyer": chat.buyer, "seller": chat.seller} for chat in chats]) # Borde va säljaren, titel på listing, bild på listing, senaste meddelandet och dess tid.
     # , "read_by": [user.name for user in message.readers]
-
-
+    # Ksk kan använda serialize() i returnen?
 
 @app.route("/messages/int:user_id", methods=["GET"])
 @jwt_required()
@@ -289,14 +290,16 @@ if __name__ == "__main__":
 
 # TODO: Add redirect to log-in page if jwt_required sends error.
 # TODO: Possibility to log in with email, Google, LiuID???
-# TODO: Add phonenumber to User table
 # TODO: Add student.liu.se to email verification?
 # TODO: Add all templates (eg: view_listing_page)
-# TODO: Check if listing is a doplicate?????
-# TODO: Add last active to user table and online status
 # TODO: Add search function
 # TODO: Add image upload to listing
 # TODO: Add image upload to profile
 # TODO: Add image upload to chat
 # TODO: Add image upload to message
 # TODO: Add a user review/rating system?
+# TODO: Delete_profile ska deletea allt som usern har gjort eller göra om usern till
+#       en "deleted user" som syns i chattar mm.
+# TODO: I add_listing_page ksk kolla att alla fält för en listing är ifyllda. Att
+#       inlägget har ett pris, location, mm?
+
