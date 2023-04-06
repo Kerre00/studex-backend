@@ -33,10 +33,12 @@ def home_page():
     Function that handles what happens when the user
     visits the home page.
     """
+    url = 'http://127.0.0.1:5000/signup'
+    link = '<a href="{}">{}</a>'.format(url, url)
     current_user = get_jwt_identity()
     if current_user:
         return jsonify({"message": "Welcome to LiU-böcker!", "status": "You are logged in as {}".format(current_user)}), 200
-    return jsonify({"message": "Welcome to LiU-böcker!", "status": "You are not logged in."}), 200
+    return jsonify({"message": "Welcome to LiU-böcker!", "status": "You are not logged in. Please make an account at " + link}), 200
 
 # _________________________________________
 # ---------- User authentication ---------- 
@@ -46,10 +48,13 @@ def login_page():
     Function that handles the login process for users.
     """
     data = request.get_json()
-    user = User.query.filter_by(name=data["username"]).first()
+    user = User.query.filter_by(username=data["username"]).first()
     if user and bcrypt.check_password_hash(user.password, data["password"]):
-        access_token = create_access_token(identity=user, expires_delta=timedelta(days=1))
-        return jsonify({"message": "Welcome back!"}, access_token=access_token), 200
+        # if user.is_online():
+        #     return jsonify("ERROR: User is already logged in."), 400
+        access_token = create_access_token(identity=user.serialize(), expires_delta=timedelta(hours=1))
+        user.login()
+        return jsonify({"message": "Successfully logged in", "token": access_token}), 200
     return jsonify("ERROR: Invalid username or password."), 401
 
 @app.route("/signup", methods=["POST"])
@@ -59,18 +64,24 @@ def signup_page():
     """
     data = request.get_json()
 
-    if User.query.filter_by(name=data["username"]).first():
+    if User.query.filter_by(username=data["username"]).first():
         return jsonify("ERROR: Username already exists."), 400
     if User.query.filter_by(email=data["email"]).first(): 
         return jsonify("ERROR: Email is already used."), 400
     if User.query.filter_by(phone_number=data["phone_number"]).first():
         return jsonify("ERROR: Phone number is already used."), 400
-    
 
-    db.session.add(
-        User(username=data["username"], password=data["password"],
-        email=data["email"], first_name=data["first_name"], last_name=data["last_name"], 
-        phone_number=data["phone_number"]))
+    # Initialize user with default values for optional arguments
+    new_user = User(
+        username=data["username"], 
+        password=data["password"], 
+        email=data["email"], 
+        first_name=data.get("first_name"), 
+        last_name=data.get("last_name"), 
+        phone_number=data.get("phone_number")
+    )
+    
+    db.session.add(new_user)
 
     db.session.commit()
     return redirect("/login", 200, jsonify({"message": "Successfully signed up"}))
@@ -82,10 +93,10 @@ def logout_page():
     """
     Function that handles the logout process for users.
     """
-    jti = get_jwt()["jti"]
-    now = datetime.now(timezone.utc)
-    db.session.add(TokenBlocklist(jti=jti, revoked_at=now))
+    user = get_jwt_identity()
+    db.session.add(TokenBlocklist(jti=get_jwt()["jti"]))
     db.session.commit()
+    user.logout()
     return redirect("/", 200, jsonify({"message": "Successfully logged out"}))
 # __________________________________
 # ---------- User profile ----------
@@ -114,14 +125,12 @@ def edit_profile_page():
     if not user:
         return redirect("/login")
     data = request.get_json()
-    if data["phone_number"] != None:
-        user.phone_number = data["phone_number"]
-    if data["first_name"] != None:
-        user.first_name = data["first_name"]
-    if data["last_name"] != None:
-        user.last_name = data["last_name"]
-    if data["password"] != None:
-        user.password = data["password"]
+
+    user.phone_number = data.get("phone_number", user.phone_number)
+    user.first_name = data.get("first_name", user.first_name)
+    user.last_name = data.get("last_name", user.last_name)
+    user.password = data.get("password", user.password)
+
     db.session.commit()
     return jsonify({"message": "Profile updated successfully"}), 200
 
@@ -130,15 +139,16 @@ def edit_profile_page():
 def delete_profile_page(): #Remove all user content/data
     """
     Function that handles the process of deleting a user profile.
+    The deletion of the user profile also deletes all the listings
+    which is handled by the cascade delete in the database.
     """
     user = get_jwt_identity()
     if not user:
         return redirect("/login")
+    db.session.add(TokenBlocklist(jti=get_jwt()["jti"]))
     db.session.delete(user)
     db.session.commit()
-    jti = get_jwt()["jti"]
-    now = datetime.now(timezone.utc)
-    return redirect("/", 200, jsonify({"message": "Profile deleted successfully"}))
+    return redirect("/", 200, jsonify({"message": "Account deleted successfully"}))
 
 # _________________________________________
 # ---------- Listings management ---------- 
@@ -153,14 +163,19 @@ def add_listing_page():
     if not user:
         return redirect("/login")
     data = request.get_json()
+
     new_listing = Listing(
-        title=data["title"], price=data["price"], location=data["location"],
-        description=data["description"], isbn=data["isbn"], seller_id=user)
+        title=data["title"], 
+        price=data["price"], 
+        location=data.get("location"),
+        description=data.get("description"),
+        seller_id=user["id"])
+    
     if not new_listing:
         return jsonify("ERROR: Listing could not be created"), 400
     db.session.add(new_listing)
     db.session.commit()
-    return jsonify({"message": "Listing has been posted"}), 200
+    return jsonify({"message": "Listing has been posted", "listing_id": new_listing.id}), 200
 
 @app.route("/listing/edit/<ListingID>", methods=["POST", "GET"])
 @jwt_required()
@@ -246,7 +261,67 @@ def search_listings_page():
 # ______________________________
 # ---------- Chatting ---------- 
 
-@app.route("/messages/all", methods=["GET"])
+@app.route("/listing/<ListingID>/new_chat", methods=["POST"])
+@jwt_required()
+def new_chat_page(ListingID):
+    """
+    Function that handles the process of creating a new chat.
+    """
+    user = get_jwt_identity()
+    listing = Listing.query.filter_by(id=ListingID).first()
+    if not user:
+        return redirect("/login")
+    if not listing:
+        return jsonify("ERROR: Listing was not found."), 400
+    if listing.seller_id == user["id"]:
+        return jsonify("ERROR: You cannot chat with yourself."), 400
+    new_chat = Chat(buyer_id=user["id"], seller_id=listing.seller_id, listing_id=listing.id)
+    db.session.add(new_chat)
+    db.session.commit()
+    return jsonify({"message": "Chat created successfully", "chat_id": new_chat.id}), 200
+
+@app.route("/messages/<ChatID>", methods=["GET"])
+@jwt_required()
+def chat_page(ChatID):
+    """
+    Function that handles the process of displaying a chat.
+    """
+    user = get_jwt_identity()
+    chat = Chat.query.filter_by(id=ChatID).first()
+    if not user:
+        return redirect("/login")
+    if not chat:
+        return jsonify("ERROR: Chat was not found."), 400
+    if chat.buyer_id != user.id and chat.seller_id != user.id:
+        return jsonify("ERROR: You are not part of this chat."), 400
+    return jsonify({"messages": chat.serialize()["messages"]}), 200
+
+@app.route("/messages/<ChatID>/send", methods=["POST"])
+@jwt_required()
+def send_message_page(ChatID):
+    """
+    Function that handles the process of sending a message.
+    """
+    user = get_jwt_identity()
+    chat = Chat.query.filter_by(id=ChatID).first()
+    if not user:
+        return redirect("/login")
+    if not chat:
+        return jsonify("ERROR: Chat was not found."), 400
+    if chat.buyer_id != user["id"] and chat.seller_id != user["id"]:
+        return jsonify("ERROR: You are not part of this chat."), 400
+    data = request.get_json()
+    new_message = Message(
+        message=data["message"],
+        chat_id=ChatID,
+        author_id=user["id"])
+    if not new_message:
+        return jsonify("ERROR: Message could not be created"), 400
+    db.session.add(new_message)
+    db.session.commit()
+    return jsonify({"message": "Message sent successfully", "message_id": new_message.id}), 200
+
+@app.route("/chats/all", methods=["GET"])
 @jwt_required()
 def all_chats_page():
     """
@@ -264,22 +339,22 @@ def all_chats_page():
     # , "read_by": [user.name for user in message.readers]
     # Ksk kan använda serialize() i returnen?
 
-@app.route("/messages/int:user_id", methods=["GET"])
-@jwt_required()
-def chat_page():
-    """
-    Function that handles the process of displaying a chat between two users.
-    """
-    selected_chat_id = request.get_json()["chat_id"]
-    user = get_jwt_identity()
-    if not user:
-        return redirect("/login")
-    if not selected_chat_id:
-        return jsonify("ERROR: No chat id was provided."), 400
-    messages = Message.query.filter_by(chat_id=selected_chat_id).all()
-    if not messages:
-        return jsonify({"message": "You have no messages yet."}), 200
-    return jsonify([message.message for message in messages])
+# @app.route("/messages/int:user_id", methods=["GET"])
+# @jwt_required()
+# def chat_page():
+#     """
+#     Function that handles the process of displaying a chat between two users.
+#     """
+#     selected_chat_id = request.get_json()["chat_id"]
+#     user = get_jwt_identity()
+#     if not user:
+#         return redirect("/login")
+#     if not selected_chat_id:
+#         return jsonify("ERROR: No chat id was provided."), 400
+#     messages = Message.query.filter_by(chat_id=selected_chat_id).all()
+#     if not messages:
+#         return jsonify({"message": "You have no messages yet."}), 200
+#     return jsonify([message.message for message in messages])
 
 # ----------------------------------------------------------------------------
 
