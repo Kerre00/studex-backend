@@ -1,15 +1,13 @@
-from flask import Flask, request, jsonify
-from flask_sqlalchemy import SQLAlchemy
-import secrets
 import os
-import sys
-from flask_bcrypt import Bcrypt
-from datetime import timezone, datetime, timedelta
 import re
-from flask_jwt_extended import (
-JWTManager, jwt_required, create_access_token, get_jwt, get_jwt_identity
-)
+import sys
+from datetime import datetime, timedelta, timezone
+from flask import Flask
+from flask_bcrypt import Bcrypt
+from flask_jwt_extended import JWTManager
+from flask_sqlalchemy import SQLAlchemy
 from sqlalchemy.orm import validates
+import secrets
 
 """
 This file contains the database models for the web application.
@@ -48,11 +46,11 @@ db = SQLAlchemy(app)
 
 # -------------------------------------DATABASE START-------------------------------------
 
-book_course = db.Table("listing_course", # This is the table that connects the listing and the course
+course_listings = db.Table("course_listings", # This is the table that connects the listing and the course
     db.Column("listing_id", db.Integer, db.ForeignKey("listing.id"), primary_key=True),
     db.Column("course_id", db.String(12), db.ForeignKey("course.id"), primary_key=True))
 
-book_program = db.Table("listing_program", # This is the table that connects the listing and the program
+program_listings = db.Table("program_listings", # This is the table that connects the listing and the program
     db.Column("listing_id", db.Integer, db.ForeignKey("listing.id"), primary_key=True),
     db.Column("program_id", db.String(12), db.ForeignKey("program.id"), primary_key=True))
 
@@ -63,10 +61,6 @@ favorite_listings = db.Table("favorite_listings", # This is the table that conne
 viewed_listings = db.Table("viewed_listings", # This is the table that connects the user and the listing
     db.Column("user_id", db.String(12), db.ForeignKey("user.id"), primary_key=True),
     db.Column("listing_id", db.Integer, db.ForeignKey("listing.id"), primary_key=True))
-
-# book_topic = db.Table("listing_topic", # This is the table that connects the listing and the topic
-#     db.Column("listing_id", db.Integer, db.ForeignKey("listing.id"), primary_key=True),
-#     db.Column("topic_id", db.String(12), db.ForeignKey("topic.id"), primary_key=True))
 
 class User(db.Model):
     """
@@ -80,25 +74,30 @@ class User(db.Model):
     phone_number = db.Column(db.String(30), nullable=True, unique=True)
     first_name = db.Column(db.String(50), nullable=True)
     last_name = db.Column(db.String(50), nullable=True)
-    chat_id = db.Column(db.Integer, db.ForeignKey("chat.id"), nullable=True) # The chat the user is currently in
     last_seen = db.Column(db.DateTime, nullable=True) # The last time the user was seen
-    online = db.Column(db.Boolean, nullable=False, default=False) # If the user is online or not
+    online = db.Column(db.Boolean, nullable=False) # If the user is online or not
 
-    listings = db.relationship("Listing", backref=db.backref("user", lazy=True), cascade="all, delete-orphan") # Owner of the listing
+    listings = db.relationship("Listing", backref=db.backref("owner", lazy=True)) # Owner of the listing
+    
+    chats_as_buyer = db.relationship("Chat", backref=db.backref("buyer", lazy=True), foreign_keys="Chat.buyer_id") # Chats as buyer
+    chats_as_seller = db.relationship("Chat", backref=db.backref("seller", lazy=True), foreign_keys="Chat.seller_id") # Chats as seller
+
     favorites = db.relationship("Listing", secondary=favorite_listings, backref=db.backref("favorited_by", lazy=True)) # Users favorite listings
-    viewed_listings = db.relationship("Listing", secondary=viewed_listings, backref=db.backref("viewed_listings", lazy=True)) # Users viewed listings
-    # profile_picture = db.relationship("Image", uselist=False, backref=db.backref("user", lazy=True), cascade="all, delete-orphan") # Profile picture
+    viewed_listings = db.relationship("Listing", secondary=viewed_listings, backref=db.backref("viewed_by", lazy=True)) # Users viewed listings
 
-    def __init__(self, username, password, email, phone_number=None, first_name=None, last_name=None):
+    # profile_picture = db.relationship("Image", uselist=False, backref=db.backref("user", lazy=True)) # Profile picture
+
+    def __init__(self, username, password, email, phone_number=None, first_name=None, last_name=None, online=False):
         
-        self.password = bcrypt.generate_password_hash(password).decode('utf-8')
-        self.created_at = datetime.now(timezone.utc)
         self.id = secrets.token_hex(12)
-        self.phone_number = phone_number
         self.username = username
+        self.password = bcrypt.generate_password_hash(password).decode('utf-8')
         self.email = email
+        self.phone_number = phone_number
         self.first_name = first_name
         self.last_name = last_name
+        self.online = online
+        self.created_at = datetime.now(timezone.utc)
 
     @validates("username")
     def validate_username(self, key, username):
@@ -158,6 +157,78 @@ class User(db.Model):
             # "profile_picture": self.profile_picture[0].url if self.profile_picture else None
         }
     
+    def get_all_chats(self):
+        """
+        This method returns all the chats the user is in.
+        """
+        return Chat.query.filter_by((Chat.buyer_id == self.id) or (Chat.seller_id == self.id)).all()
+    
+    def get_chat(self, chat_id):
+        """
+        This method returns the chat with the specified id.
+        """
+        return Chat.query.filter_by(id=chat_id).first()
+    
+    def get_all_listings(self):
+        """
+        This method returns all the listings the user has created.
+        """
+        return Listing.query.filter_by(owner_id=self.id).all()
+    
+    def get_listing(self, listing_id):
+        """
+        This method returns the listing with the specified id.
+        """
+        return Listing.query.filter_by(id=listing_id).first()
+    
+    def get_all_favorites(self):
+        """
+        This method returns all the listings the user has favorited.
+        """
+        return self.favorites
+    
+    def set_favorite(self, listing_id):
+        """
+        This method adds the listing with the specified id to the users favorites.
+        """
+        listing = Listing.query.filter_by(id=listing_id).first()
+        if listing not in self.favorites:
+            self.favorites.append(listing)
+            db.session.commit()
+
+    def remove_favorite(self, listing_id):
+        """
+        This method removes the listing with the specified id from the users favorites.
+        """
+        listing = Listing.query.filter_by(id=listing_id).first()
+        if listing in self.favorites:
+            self.favorites.remove(listing)
+            db.session.commit()
+
+    def get_all_viewed_listings(self):
+        """
+        This method returns all the listings the user has viewed.
+        """
+        return self.viewed_listings
+    
+    def set_viewed_listing(self, listing_id):
+        """
+        This method adds the listing with the specified id to the users viewed listings.
+        """
+        listing = Listing.query.filter_by(id=listing_id).first()
+        if listing not in self.viewed_listings:
+            self.viewed_listings.append(listing)
+            db.session.commit()
+
+    def remove_viewed_listing(self, listing_id):
+        """
+        This method removes the listing with the specified id from the users viewed listings.
+        """
+        listing = Listing.query.filter_by(id=listing_id).first()
+        if listing in self.viewed_listings:
+            self.viewed_listings.remove(listing)
+            db.session.commit()
+    
     def login(self):
         """
         This method updates the user's last seen time to the current time when the user logs in.
@@ -195,28 +266,23 @@ class Listing(db.Model):
     price = db.Column(db.Float, nullable=False)
     location = db.Column(db.String(30), nullable=True)
     description = db.Column(db.String(240), nullable=True)
-    created_at = db.Column(db.DateTime, nullable=False, default=db.func.now())
-    seller_id = db.Column(db.String(12), db.ForeignKey("user.id"), nullable=False)
-    program_id = db.Column(db.Integer, db.ForeignKey('program.id'), nullable=True)
-    course_id = db.Column(db.Integer, db.ForeignKey('course.id'), nullable=True)
+    created_at = db.Column(db.DateTime, nullable=False)
 
-    # images = db.relationship("Image", backref=db.backref("listing", lazy=True), cascade="all, delete-orphan")
-    seller = db.relationship("User", backref=db.backref("listing_seller", lazy=True))
-    viewed_by = db.relationship("User", secondary=viewed_listings, backref=db.backref("viewed_listing", lazy=True))
-    course = db.relationship('Course', backref='listings')
-    program = db.relationship('Program', backref='listings')
+    owner_id = db.Column(db.String(12), db.ForeignKey("user.id"), nullable=False)
+    
+    course = db.relationship("Course", secondary=course_listings)
+    program = db.relationship("Program", secondary=program_listings)
 
-    def __init__(self, title, price, location, description, course_id = None, program_id = None, seller_id = None):
+    chats = db.relationship("Chat", backref=db.backref("listing", lazy=True)) 
+
+    def __init__(self, title, price, location, description = None, owner_id = None):
         self.id = str(secrets.token_hex(12))
         self.title = title
         self.price = price
         self.location = location
         self.description = description
-        self.course_id = course_id
-        self.program_id = program_id
-        # self.images = images
-        self.seller_id = seller_id
-
+        self.owner_id = owner_id
+        self.created_at = datetime.now(timezone.utc)
 
     def __repr__(self):
         return f"{self.id}"
@@ -240,24 +306,50 @@ class Listing(db.Model):
             "location": self.location,
             "description": self.description,
             "created_at": self.created_at,
-            "course": self.course.serialize(),
-            "program": self.program.serialize(),
-            "seller": self.seller.serialize(),
-            # "images": [image.serialize() for image in self.images]
+            "owner_id": self.owner_id,
         }
+    
+class Course(db.Model):
+    """
+    This class represents the course search category model.
+    """
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(80), unique=False)
+    program_id = db.Column(db.Integer, db.ForeignKey("program.id"), nullable = False)
+
+    listings = db.relationship("Listing", secondary=course_listings) # Many to many relationship with listings
+
+    def __init__(self, name):
+        self.name = name
+
+    def __repr__(self):
+        return f"{self.name}"
+
+class Program(db.Model):
+    """
+    This class represents the program search category model.
+    """
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(80), unique=True)
+
+    listings = db.relationship("Listing", secondary=program_listings) # Many to many relationship with listings
+
+    def __init__(self, name):
+        self.name = name
+
+    def __repr__(self):
+        return f"{self.name}"
 
 class Chat(db.Model):
     """
     This class represents the chat model.
     """
-    id = db.Column(db.String(12), primary_key=True, default=lambda: str(secrets.token_hex(12)))
+    id = db.Column(db.String(12), primary_key=True)
     listing_id = db.Column(db.String(12), db.ForeignKey("listing.id"), nullable = False)
-    buyer_id = db.Column(db.String(12), db.ForeignKey("user.id"), nullable=False)
-    seller_id = db.Column(db.String(12), db.ForeignKey("user.id"), nullable=False)
-    listing = db.relationship("Listing", backref=db.backref("chats", lazy=True))
-    buyer = db.relationship("User", foreign_keys=[buyer_id])
-    seller = db.relationship("User", foreign_keys=[seller_id])
-    messages = db.relationship("Message", backref=db.backref("chat", lazy=True), cascade="all, delete-orphan")
+    buyer_id = db.Column(db.String(12), db.ForeignKey("user.id"), nullable = False)
+    seller_id = db.Column(db.String(12), db.ForeignKey("user.id"), nullable = False)
+
+    messages = db.relationship("Message", backref=db.backref("chat", lazy=True)) # One to many relationship with messages
 
     def __init__(self, listing_id, buyer_id, seller_id, messages = []):
         self.id = secrets.token_hex(12)
@@ -272,13 +364,12 @@ class Chat(db.Model):
     def serialize(self):
         return {
             "id": self.id,
-            "listing": self.listing.serialize(),
-            "buyer": self.buyer.serialize(),
-            "seller": self.seller.serialize(),
+            "listing_id": self.listing_id,
+            "buyer_id": self.buyer_id,
+            "seller_id": self.seller_id,
             "messages": [message.serialize() for message in self.messages]
         }
     
-    # Add new message to chat
     def add_message(self, message):
         self.messages.append(message)
         db.session.commit()
@@ -288,21 +379,29 @@ class Message(db.Model):
     This class represents the message model.
     """
     id = db.Column(db.String(12), primary_key=True)
-    created_at = db.Column(db.DateTime, nullable=False)
+    timestamp = db.Column(db.DateTime, nullable=False)
     message = db.Column(db.String(140), nullable=False)
     author_id = db.Column(db.String(12), db.ForeignKey('user.id'), nullable=False)
     chat_id = db.Column(db.Integer, db.ForeignKey("chat.id"), nullable=False)
-    author = db.relationship("User", foreign_keys=[author_id])
 
     def __init__(self, message, author_id, chat_id):
         self.id = secrets.token_hex(12)
-        self.created_at = datetime.now()
+        self.timestamp = datetime.now()
         self.message = message
         self.author_id = author_id
         self.chat_id = chat_id
 
     def __repr__(self):
         return f"{self.id}"
+    
+    def serialize(self):
+        return {
+            "id": self.id,
+            "timestamp": self.timestamp,
+            "message": self.message,
+            "author_id": self.author_id,
+            "chat_id": self.chat_id
+        }
     
     def add_message_to_chat(self, message, author_id, chat_id):
         message = Message(message, author_id, chat_id)
@@ -322,39 +421,6 @@ class Message(db.Model):
 #     user_id = db.Column(db.String(12), db.ForeignKey('user.id'))
 
 
-# class Topic(db.Model):
-#     """
-#     This class represents the topic search category model.
-#     """
-#     id = db.Column(db.Integer, primary_key=True)
-#     name = db.Column(db.String(80), unique=True)
-
-
-class Course(db.Model):
-    """
-    This class represents the course search category model.
-    """
-    id = db.Column(db.Integer, primary_key=True)
-    name = db.Column(db.String(80), unique=True)
-
-    def __init__(self, name):
-        self.name = name
-
-    def __repr__(self):
-        return f"{self.name}"
-
-class Program(db.Model):
-    """
-    This class represents the program search category model.
-    """
-    id = db.Column(db.Integer, primary_key=True)
-    name = db.Column(db.String(80), unique=True)
-
-    def __init__(self, name):
-        self.name = name
-
-    def __repr__(self):
-        return f"{self.name}"
 
 class TokenBlocklist(db.Model):
     """
@@ -366,7 +432,7 @@ class TokenBlocklist(db.Model):
 
     def __init__(self, jti):
         self.jti = jti
-        self.revoked_at = datetime.datetime.now()
+        self.revoked_at = datetime.now()
 
     def __repr__(self):
         return f"{self.id}"
@@ -375,7 +441,7 @@ class TokenBlocklist(db.Model):
         return self.revoked_at is not None
     
     def revoke(self):
-        self.revoked_at = datetime.datetime.now()
+        self.revoked_at = datetime.now()
         db.session.commit()
 
     def unrevoke(self):

@@ -18,7 +18,7 @@ print(r.text)
 # login to that account
 data = {"username": "Elle69", "password": "test"}
 r2 = requests.post(url + "login", json=data, verify=False)
-# print(r2.text)
+print(r2.text)
 
 # Get the token
 token = r2.json()["token"]
@@ -27,9 +27,12 @@ token = r2.json()["token"]
 # Create a new post
 # Send header with token
 headers = {"Content-Type": "application/json", "Authorization": "Bearer " + token}
-data = {"title": "test", "description": "test", "price": 10}
+data = {"title": "Diskret Matematik", "description": "Bok skriven av bästa Armen", "price": 69, "program_id": 2, "course_id": 3}
 r3 = requests.post(url + "listing/add", json=data, verify=False, headers=headers)
 print(r3.text)
+
+# Get the listing id
+listing_id = r3.json()["listing_id"]
 
 # Create another account
 data = {"username": "Kerre", "password": "test", "email": "lol@loller.se", "phone_number": "072-1525631", "first_name": "Kevin", "last_name": "Rintanen Österblad"}
@@ -47,16 +50,95 @@ headers2 = {"Content-Type": "application/json", "Authorization": "Bearer " + tok
 
 # Create new chat on the post
 
-print(r3.json()["listing_id"] + "---------------------------------------------")
+# print(r3.json()["listing_id"] + "---------------------------------------------")
 data = {"listing_id": r3.json()["listing_id"]}
 r6 = requests.post(url + "listing/" + data["listing_id"] + "/new_chat", json=data, verify=False, headers=headers2)
 print(r6.text)
 
-
 # Get the chat id
 chat_id = r6.json()["chat_id"]
 
-# Send a message to the chat
+# Send a message to the chat as the buyer
 data = {"chat_id": chat_id, "message": "Hello Elliotana, I am interested in your book!"}
 r7 = requests.post(url + "messages/" + data["chat_id"] + "/send", json=data, verify=False, headers=headers2)
 print(r7.text)
+
+# Send a message to the chat as the seller
+data = {"chat_id": chat_id, "message": "Hello Kerre, I am happy to hear that! I will send you my address!"}
+r8 = requests.post(url + "messages/" + data["chat_id"] + "/send", json=data, verify=False, headers=headers)
+print(r8.text)
+
+# Send a message to the chat as the buyer
+data = {"chat_id": chat_id, "message": "Great! I will send you the money!"}
+r9 = requests.post(url + "messages/" + data["chat_id"] + "/send", json=data, verify=False, headers=headers2)
+print(r9.text)
+
+# Send a message to the chat as the seller
+data = {"chat_id": chat_id, "message": "Thank you! I will send the book as soon as I get the money!"}
+r10 = requests.post(url + "messages/" + data["chat_id"] + "/send", json=data, verify=False, headers=headers)
+print(r10.text)
+
+# Send a message to the chat as the buyer
+data = {"chat_id": chat_id, "message": "Great! I will send the money as soon as possible!"}
+r11 = requests.post(url + "messages/" + data["chat_id"] + "/send", json=data, verify=False, headers=headers2)
+print(r11.text)
+
+# Get the messages from the chat
+r12 = requests.get(url + "messages/" + chat_id, verify=False, headers=headers)
+print(r12.text)
+
+# Logout from the buyer account
+r13 = requests.post(url + "logout", verify=False, headers=headers2)
+print(r13.text)
+
+# Edit the post
+data = {"title": "Odiskret Matematik", "description": "Bok skriven av bästa Benet", "price": 420, "program_id": 3, "course_id": 1, "listing_id": r3.json()["listing_id"]}
+r14 = requests.put(url + "listing/edit/" + listing_id, json=data, verify=False, headers=headers)
+print(r14.text)
+
+# Get listing page
+r15 = requests.get(url + "listing/" + listing_id, verify=False, headers=headers)
+print(r15.text)
+
+# Login to the buyer account
+data = {"username": "Kerre", "password": "test"}
+r16 = requests.post(url + "login", json=data, verify=False)
+print(r16.text)
+
+# Get the token
+token3 = r16.json()["token"]
+
+# Send header with token
+headers3 = {"Content-Type": "application/json", "Authorization": "Bearer " + token3}
+
+# Add Elles post to favourites
+data = {"listing_id": listing_id}
+r17 = requests.post(url + "listing/" + listing_id + "/favourite", json=data, verify=False, headers=headers3)
+print(r17.text)
+
+# Try adding the same post to favourites again
+data = {"listing_id": listing_id}
+r18 = requests.post(url + "listing/" + listing_id + "/favourite", json=data, verify=False, headers=headers3)
+print(r18.text)
+
+# Try unfavouriting the post
+data = {"listing_id": listing_id}
+r19 = requests.delete(url + "listing/" + listing_id + "/favourite", json=data, verify=False, headers=headers3)
+print(r19.text)
+
+# View all listings
+r20 = requests.get(url + "listings", verify=False, headers=headers3)
+print(r20.text)
+
+# Get favourites
+r21 = requests.get(url + "listings/favourites", verify=False, headers=headers3)
+print(r21.text)
+
+# Remove the post
+r22 = requests.delete(url + "listing/delete/" + listing_id, verify=False, headers=headers)
+print(r22.text)
+
+
+
+
+
