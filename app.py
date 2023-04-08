@@ -111,8 +111,8 @@ def profile_page(): #FUNGERAR
     identity = get_jwt_identity()
     user = User.query.filter_by(id=identity['id']).first()
     if not user:
-        return redirect("/login")
-    return jsonify(user.serialize())
+        return redirect("/login", 400)
+    return jsonify(user.serialize()), 200
     # return jsonify({"username": user.username, "email": user.email, "phone_number": user.phone_number,
     #                  "first_name": user.first_name, "last_name": user.last_name}), 200
 
@@ -168,15 +168,15 @@ def add_listing_page(): #FUNGERAR HALVT KOLLA LISTING_COURSE + LISTING_PROGRAM
         return redirect("/login")
     data = request.get_json()
 
+    if not data.get('title') or not data.get('price'):
+        return jsonify("ERROR: Listing could not be created"), 400
+
     new_listing = Listing(
         title=data["title"], 
         price=data["price"], 
         owner_id=user["id"],
         location=data.get("location"),
         description=data.get("description"))
-    
-    if not new_listing:
-        return jsonify("ERROR: Listing could not be created"), 400
     
     # new_listing.course = Course.query.filter_by(id=data.get("course_id")).first()
     # new_listing.program = Program.query.filter_by(id=data.get("program_id")).first()
@@ -468,4 +468,10 @@ if __name__ == "__main__":
 #       en "deleted user" som syns i chattar mm.
 # TODO: I add_listing_page ksk kolla att alla fält för en listing är ifyllda. Att
 #       inlägget har ett pris, location, mm?
+# TODO: I profile_page är detta förmodligen onödigt: user = User.query.filter_by(id=identity['id']).first()
+                                                        # if not user:
+                                                            # return redirect("/login", 400)
+# TODO: Fixa att validate password inte validerar det hashade passwordet
+# TODO: I edit_listings_page och i edit_profile_page och i andra också är detta förmodligen onödigt if not user:
+                                                                                                      # return redirect("/login")
 
