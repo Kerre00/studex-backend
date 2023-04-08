@@ -157,78 +157,6 @@ class User(db.Model):
             # "profile_picture": self.profile_picture[0].url if self.profile_picture else None
         }
     
-    def get_all_chats(self):
-        """
-        This method returns all the chats the user is in.
-        """
-        return Chat.query.filter_by((Chat.buyer_id == self.id) or (Chat.seller_id == self.id)).all()
-    
-    def get_chat(self, chat_id):
-        """
-        This method returns the chat with the specified id.
-        """
-        return Chat.query.filter_by(id=chat_id).first()
-    
-    def get_all_listings(self):
-        """
-        This method returns all the listings the user has created.
-        """
-        return Listing.query.filter_by(owner_id=self.id).all()
-    
-    def get_listing(self, listing_id):
-        """
-        This method returns the listing with the specified id.
-        """
-        return Listing.query.filter_by(id=listing_id).first()
-    
-    def get_all_favorites(self):
-        """
-        This method returns all the listings the user has favorited.
-        """
-        return self.favorites
-    
-    def set_favorite(self, listing_id):
-        """
-        This method adds the listing with the specified id to the users favorites.
-        """
-        listing = Listing.query.filter_by(id=listing_id).first()
-        if listing not in self.favorites:
-            self.favorites.append(listing)
-            db.session.commit()
-
-    def remove_favorite(self, listing_id):
-        """
-        This method removes the listing with the specified id from the users favorites.
-        """
-        listing = Listing.query.filter_by(id=listing_id).first()
-        if listing in self.favorites:
-            self.favorites.remove(listing)
-            db.session.commit()
-
-    def get_all_viewed_listings(self):
-        """
-        This method returns all the listings the user has viewed.
-        """
-        return self.viewed_listings
-    
-    def set_viewed_listing(self, listing_id):
-        """
-        This method adds the listing with the specified id to the users viewed listings.
-        """
-        listing = Listing.query.filter_by(id=listing_id).first()
-        if listing not in self.viewed_listings:
-            self.viewed_listings.append(listing)
-            db.session.commit()
-
-    def remove_viewed_listing(self, listing_id):
-        """
-        This method removes the listing with the specified id from the users viewed listings.
-        """
-        listing = Listing.query.filter_by(id=listing_id).first()
-        if listing in self.viewed_listings:
-            self.viewed_listings.remove(listing)
-            db.session.commit()
-    
     def login(self):
         """
         This method updates the user's last seen time to the current time when the user logs in.
@@ -254,9 +182,6 @@ class User(db.Model):
         now = datetime.now(timezone.utc)
         return (now - self.last_seen) < timedelta(minutes=10) # If the user was last seen less than 10 minutes ago, consider them online
     
-    
-
-
 class Listing(db.Model):
     """
     This class represents the listing model.
@@ -286,17 +211,6 @@ class Listing(db.Model):
 
     def __repr__(self):
         return f"{self.id}"
-    
-    def edit_listing(self, title, price, location, description):
-        self.title = title
-        self.price = price
-        self.location = location
-        self.description = description
-        db.session.commit()
-
-    def remove_listing(self):
-        db.session.delete(self)
-        db.session.commit()
 
     def serialize(self):
         return {
@@ -345,7 +259,7 @@ class Chat(db.Model):
     This class represents the chat model.
     """
     id = db.Column(db.String(12), primary_key=True)
-    listing_id = db.Column(db.String(12), db.ForeignKey("listing.id"), nullable = False)
+    listing_id = db.Column(db.String(12), db.ForeignKey("listing.id"), nullable = True)
     buyer_id = db.Column(db.String(12), db.ForeignKey("user.id"), nullable = False)
     seller_id = db.Column(db.String(12), db.ForeignKey("user.id"), nullable = False)
 
@@ -369,10 +283,6 @@ class Chat(db.Model):
             "seller_id": self.seller_id,
             "messages": [message.serialize() for message in self.messages]
         }
-    
-    def add_message(self, message):
-        self.messages.append(message)
-        db.session.commit()
 
 class Message(db.Model):
     """
@@ -402,13 +312,6 @@ class Message(db.Model):
             "author_id": self.author_id,
             "chat_id": self.chat_id
         }
-    
-    def add_message_to_chat(self, message, author_id, chat_id):
-        message = Message(message, author_id, chat_id)
-        db.session.add(message)
-        db.session.commit()
-
-    
 
 # class Image(db.Model):
 #     """
@@ -419,8 +322,6 @@ class Message(db.Model):
 #     created_at = db.Column(db.DateTime, nullable=False, default=db.func.now())
 #     listing_id = db.Column(db.Integer, db.ForeignKey('listing.id'))
 #     user_id = db.Column(db.String(12), db.ForeignKey('user.id'))
-
-
 
 class TokenBlocklist(db.Model):
     """

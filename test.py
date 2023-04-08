@@ -87,6 +87,25 @@ print(r11.text)
 r12 = requests.get(url + "messages/" + chat_id, verify=False, headers=headers)
 print(r12.text)
 
+print("-------------------------------------------------------------")
+# Get all chats
+r121 = requests.get(url + "chats/all", verify=False, headers=headers)
+print(r121.text)
+print("-------------------------------------------------------------")
+# Get all chats
+r122 = requests.get(url + "chats/all", verify=False, headers=headers2)
+print(r122.text)
+print("-------------------------------------------------------------")
+
+# Get listings from a specific user
+r131 = requests.get(url + "listings/user/" + "Elle69" , verify=False, headers=headers)
+print(r131.text)
+
+# Get listings from a specific user
+r141 = requests.get(url + "listings/user/" + "Kerre" , verify=False, headers=headers2)
+print(r141.text)
+
+
 # Logout from the buyer account
 r13 = requests.post(url + "logout", verify=False, headers=headers2)
 print(r13.text)
@@ -97,8 +116,9 @@ r14 = requests.put(url + "listing/edit/" + listing_id, json=data, verify=False, 
 print(r14.text)
 
 # Get listing page
-r15 = requests.get(url + "listing/" + listing_id, verify=False, headers=headers)
+r15 = requests.get(url + "listing/" + listing_id, verify=False, headers=headers2)
 print(r15.text)
+
 
 # Login to the buyer account
 data = {"username": "Kerre", "password": "test"}
@@ -134,9 +154,62 @@ print(r20.text)
 r21 = requests.get(url + "listings/favourites", verify=False, headers=headers3)
 print(r21.text)
 
-# Remove the post
-r22 = requests.delete(url + "listing/delete/" + listing_id, verify=False, headers=headers)
-print(r22.text)
+# # Remove the post
+# r22 = requests.delete(url + "listing/delete/" + listing_id, verify=False, headers=headers)
+# print(r22.text)
+
+# Create a new user
+data = {"username": "Denhärskabort", "password": "test", "email": "aaah@hotmail.com"}
+r23 = requests.post(url + "signup", json=data, verify=False)
+print(r23.text)
+
+# Login to the new user
+data = {"username": "Denhärskabort", "password": "test"}
+r24 = requests.post(url + "login", json=data, verify=False)
+print(r24.text)
+
+# Get the token
+token4 = r24.json()["token"]
+
+# Send header with token
+header4 = {"Content-Type": "application/json", "Authorization": "Bearer " + token4}
+
+# Edit profile
+data = {"username": "Denhärskabort", "first_name": "Kalle", "last_name": "Anka", "phone_number": "070420420"}
+r25 = requests.put(url + "profile", json=data, verify=False, headers=header4)
+print(r25.text)
+
+# Get profile
+r26 = requests.get(url + "profile", verify=False, headers=header4)
+print(r26.text)
+
+# Delete profile
+r27 = requests.delete(url + "profile/delete", verify=False, headers=header4)
+print(r27.text)
+
+# Get deleted profile
+r28 = requests.get(url + "profile", verify=False, headers=header4)
+print(r28.text)
+
+# Get listing page
+r15 = requests.get(url + "listing/" + listing_id, verify=False, headers=headers3)
+print(r15.text)
+
+# Get unviewed posts for Kerre
+r29 = requests.get(url + "listings/unviewed", verify=False, headers=headers3)
+print(r29.text)
+
+# Create listing
+data = {"title": "Biologi suger", "description": "Bok om biologi", "price": 499.99, "program_id": 3, "course_id": 1}
+r30 = requests.post(url + "listing/add", json=data, verify=False, headers=headers3)
+print(r30.text)
+
+print("-------------------------------------------------------------")
+# Search for listings
+# query = "/listings/search?query=biologi"
+r31 = requests.get(url + "listings/search?query=bästa", json=data, verify=False, headers=headers3)
+print(r31.text)
+print("-------------------------------------------------------------")
 
 
 
