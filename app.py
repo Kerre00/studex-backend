@@ -157,33 +157,34 @@ def delete_profile_page(): #Remove all user content/data
 # _________________________________________
 # ---------- Listings management ---------- 
 
-@app.route("/listing/add", methods=["POST"])
-@jwt_required()
-def add_listing_page(): #FUNGERAR HALVT KOLLA LISTING_COURSE + LISTING_PROGRAM
+@app.route("/signup", methods=["POST"])
+def signup_page(): #FUNGERAR
     """
-    Function that handles the process of adding a new book listing.
+    Function that handles the signup process for users.
     """
-    user = get_jwt_identity()
-    if not user:
-        return redirect("/login")
     data = request.get_json()
 
-    if not data.get('title') or not data.get('price'):
-        return jsonify("ERROR: Listing could not be created"), 400
+    if User.query.filter_by(username=data["username"]).first():
+        return jsonify("ERROR: Username already exists."), 400
+    if User.query.filter_by(email=data["email"]).first(): 
+        return jsonify("ERROR: Email is already used."), 400
+    if User.query.filter_by(phone_number=data.get("phone_number")).first() and data.get("phone_number"):
+        return jsonify("ERROR: Phone number is already used."), 400
 
-    new_listing = Listing(
-        title=data["title"], 
-        price=data["price"], 
-        owner_id=user["id"],
-        location=data.get("location"),
-        description=data.get("description"))
+    # Initialize user with default values for optional arguments
+    new_user = User(
+        username=data["username"], 
+        password=data["password"], 
+        email=data["email"], 
+        first_name=data.get("first_name"), 
+        last_name=data.get("last_name"), 
+        phone_number=data.get("phone_number")
+    )
     
-    # new_listing.course = Course.query.filter_by(id=data.get("course_id")).first()
-    # new_listing.program = Program.query.filter_by(id=data.get("program_id")).first()
+    db.session.add(new_user)
 
-    db.session.add(new_listing)
     db.session.commit()
-    return jsonify({"message": "Listing has been posted", "listing_id": new_listing.id}), 200
+    return redirect("/login", 200, jsonify({"message": "Successfully signed up"}))
 
 @app.route("/listing/edit/<ListingID>", methods=["PUT"])
 @jwt_required()

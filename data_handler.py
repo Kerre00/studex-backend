@@ -200,7 +200,7 @@ class Listing(db.Model):
 
     chats = db.relationship("Chat", backref=db.backref("listing", lazy=True)) 
 
-    def __init__(self, title, price, location, description = None, owner_id = None):
+    def __init__(self, title, location, price=0, description = None, owner_id = None):
         self.id = str(secrets.token_hex(12))
         self.title = title
         self.price = price
