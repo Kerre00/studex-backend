@@ -110,8 +110,6 @@ def profile_page(): #FUNGERAR
     """
     identity = get_jwt_identity()
     user = User.query.filter_by(id=identity['id']).first()
-    if not user:
-        return redirect("/login", 400)
     return jsonify(user.serialize()), 200
     # return jsonify({"username": user.username, "email": user.email, "phone_number": user.phone_number,
     #                  "first_name": user.first_name, "last_name": user.last_name}), 200
@@ -125,8 +123,6 @@ def edit_profile_page(): #FUNGERAR
     """
     identity = get_jwt_identity()
     user = User.query.filter_by(id=identity['id']).first()
-    if not user:
-        return redirect("/login")
     data = request.get_json()
 
     user.phone_number = data.get("phone_number", user.phone_number)
@@ -147,8 +143,6 @@ def delete_profile_page(): #Remove all user content/data
     """
     identity = get_jwt_identity()
     user = User.query.filter_by(id=identity['id']).first()
-    if not user:
-        return redirect("/login")
     db.session.add(TokenBlocklist(jti=get_jwt()["jti"]))
     db.session.delete(user)
     db.session.commit()
@@ -164,8 +158,6 @@ def add_listing_page(): #FUNGERAR HALVT KOLLA LISTING_COURSE + LISTING_PROGRAM
     Function that handles the process of adding a new book listing.
     """
     user = get_jwt_identity()
-    if not user:
-        return redirect("/login")
     data = request.get_json()
 
     new_listing = Listing(
@@ -200,8 +192,6 @@ def edit_listing_page(ListingID): #FUNGERAR HALVT KOLLA LISTING_COURSE + LISTING
     user = get_jwt_identity()
     listing = Listing.query.filter_by(id=ListingID).first()
 
-    if not user:
-        return redirect("/login")
     if not listing:
         return jsonify("ERROR: Listing not found"), 400
     if listing.owner_id != user['id']:
@@ -251,40 +241,40 @@ def listing_page(ListingID): # FUNGERAR
         return jsonify(listing.serialize()), 200
     return jsonify("ERROR: Listing was not found."), 400
 
-# Add listing to favourites
+# Add listing to favorites
 @app.route("/listing/<ListingID>/favourite", methods=["POST"])
 @jwt_required()
 def favourite_listing_page(ListingID): # FUNGERAR
     """
-    Function that handles the process of adding a book listing to favourites.
+    Function that handles the process of adding a book listing to favorites.
     """
     listing = Listing.query.filter_by(id=ListingID).first()
     identity = get_jwt_identity()
     user = User.query.filter_by(id=identity["id"]).first()
     if listing and identity:
         if listing in user.favorites:
-            return jsonify("ERROR: Listing is already in favourites."), 400
+            return jsonify("ERROR: Listing is already in favorites."), 400
         user.favorites.append(listing)
         db.session.commit()
-        return jsonify("Listing added to favourites."), 200
+        return jsonify({"message": "Listing added to favorites."}), 200
     return jsonify("ERROR: Listing was not found."), 400
 
-# Remove listing from favourites
+# Remove listing from favorites
 @app.route("/listing/<ListingID>/favourite", methods=["DELETE"])
 @jwt_required()
 def unfavourite_listing_page(ListingID): # FUNGERAR
     """
-    Function that handles the process of removing a book listing from favourites.
+    Function that handles the process of removing a book listing from favorites.
     """
     listing = Listing.query.filter_by(id=ListingID).first()
     identity = get_jwt_identity()
     user = User.query.filter_by(id=identity["id"]).first()
     if listing and user:
         if listing not in user.favorites:
-            return jsonify("ERROR: Listing is not in favourites."), 400
+            return jsonify("ERROR: Listing is not in favorites."), 400
         user.favorites.remove(listing)
         db.session.commit()
-        return jsonify("Listing removed from favourites."), 200
+        return jsonify({"message": "Listing removed from favorites."}), 200
     return jsonify("ERROR: Listing was not found."), 400
 
 @app.route("/listings", methods=["GET"])
@@ -299,9 +289,9 @@ def listings_page(): # FUNGERAR
     return jsonify("ERROR: No listings found."), 400
 
 # Show all favourite listings
-@app.route("/listings/favourites", methods=["GET"])
+@app.route("/listings/favorites", methods=["GET"])
 @jwt_required()
-def favourites_page(): # FUNGERAR
+def favorites_page(): # FUNGERAR
     """
     Function that handles the process of displaying all favourite book listings.
     """
@@ -309,7 +299,7 @@ def favourites_page(): # FUNGERAR
     user = User.query.filter_by(id=identity["id"]).first()
     if user and user.favorites:
         return jsonify([listing.serialize() for listing in user.favorites]), 200
-    return jsonify("ERROR: No favourites found."), 400
+    return jsonify("ERROR: No favorites found."), 400
 
 # Show all listings by a specific user
 @app.route("/listings/user/<Username>", methods=["GET"])
@@ -328,12 +318,18 @@ def user_listings_page(Username): # FUNGERAR
 @jwt_required()
 def unviewed_listings_page(): # FUNGERAR
     """
-    Function that handles the process of displaying all book listings that have not been viewed by the user.
+    Function that handles the process of displaying all book listings that 
+    have not been viewed by the user.
     """
     identity = get_jwt_identity()
     user = User.query.filter_by(id=identity["id"]).first()
     listings = Listing.query.all()
-    if user and listings:
+    unviewed_listings = []
+    for listing in listings:
+        if listing not in user.viewed_listings:
+            unviewed_listings.append(listing)
+
+    if user and unviewed_listings:
         return jsonify([listing.serialize() for listing in listings if listing not in user.viewed_listings]), 200
     return jsonify("ERROR: No unviewed listings found."), 400
 
@@ -387,8 +383,6 @@ def new_chat_page(ListingID): # FUNGERAR
     """
     user = get_jwt_identity()
     listing = Listing.query.filter_by(id=ListingID).first()
-    if not user:
-        return redirect("/login")
     if not listing:
         return jsonify("ERROR: Listing was not found."), 400
     if listing.owner_id == user["id"]:
@@ -406,8 +400,6 @@ def chat_page(ChatID): # FUNGERAR
     """
     user = get_jwt_identity()
     chat = Chat.query.filter_by(id=ChatID).first()
-    if not user:
-        return redirect("/login")
     if not chat:
         return jsonify("ERROR: Chat was not found."), 400
     if chat.buyer_id != user["id"] and chat.seller_id != user["id"]:
@@ -422,8 +414,6 @@ def send_message_page(ChatID): # FUNGERAR
     """
     user = get_jwt_identity()
     chat = Chat.query.filter_by(id=ChatID).first()
-    if not user:
-        return redirect("/login")
     if not chat:
         return jsonify("ERROR: Chat was not found."), 400
     if chat.buyer_id != user["id"] and chat.seller_id != user["id"]:
@@ -446,8 +436,6 @@ def all_chats_page(): # FUNGERAR
     Function that handles the process of displaying all chats for a user.
     """
     user = get_jwt_identity()
-    if not user:
-        return redirect("/login")
     chats = Chat.query.filter(db.or_(Chat.buyer_id==user["id"], Chat.seller_id==user["id"])).all()
     if not chats:
         return jsonify("ERROR: No chats found."), 400

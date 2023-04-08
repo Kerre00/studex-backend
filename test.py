@@ -131,12 +131,12 @@ token3 = r16.json()["token"]
 # Send header with token
 headers3 = {"Content-Type": "application/json", "Authorization": "Bearer " + token3}
 
-# Add Elles post to favourites
+# Add Elles post to favorites
 data = {"listing_id": listing_id}
 r17 = requests.post(url + "listing/" + listing_id + "/favourite", json=data, verify=False, headers=headers3)
 print(r17.text)
 
-# Try adding the same post to favourites again
+# Try adding the same post to favorites again
 data = {"listing_id": listing_id}
 r18 = requests.post(url + "listing/" + listing_id + "/favourite", json=data, verify=False, headers=headers3)
 print(r18.text)
@@ -150,8 +150,8 @@ print(r19.text)
 r20 = requests.get(url + "listings", verify=False, headers=headers3)
 print(r20.text)
 
-# Get favourites
-r21 = requests.get(url + "listings/favourites", verify=False, headers=headers3)
+# Get favorites
+r21 = requests.get(url + "listings/favorites", verify=False, headers=headers3)
 print(r21.text)
 
 # # Remove the post
