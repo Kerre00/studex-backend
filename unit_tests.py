@@ -220,7 +220,7 @@ def test_add_listing_page(client):
     location = 'testlocation'
     description = 'testdescription'
     payload = {'price': price, 'title': listing_title, 'location': location, 'description': description}
-    
+
     r = client.post('/listing/add', json=payload, headers={"Authorization": "Bearer " + token})
 
     # Adding a listing without the mandatory data
@@ -245,7 +245,7 @@ def test_edit_listing_page(client):
     payload = {'username': username, 'password': password}
 
     r = client.post('/login', json=payload, content_type='application/json')
-    token = r.get_json()['token']
+    token1 = r.get_json()['token']
 
     # Adding a listing with all of the optional data
     listing_title = 'testlisting'
@@ -254,7 +254,7 @@ def test_edit_listing_page(client):
     description = 'testdescription'
     payload = {'price': price, 'title': listing_title, 'location': location, 'description': description}
 
-    r = client.post('/listing/add', json=payload, headers={"Authorization": "Bearer " + token})
+    r = client.post('/listing/add', json=payload, headers={"Authorization": "Bearer " + token1})
     listing_id = r.get_json()['listing_id']
 
     # Editing all of the listings information
@@ -264,22 +264,149 @@ def test_edit_listing_page(client):
     new_description = 'newtestdescription'
     payload = {'price': new_price, 'title': new_listing_title, 'location': new_location, 'description': new_description}
 
-    r = client.put(f'/listing/edit/{listing_id}', json=payload, headers={"Authorization": "Bearer " + token})
+    r = client.put(f'/listing/edit/{listing_id}', json=payload, headers={"Authorization": "Bearer " + token1})
     assert r.status_code == 200
 
     # Editing only one of the listings information
     new_listing_title = 'newtestlisting2'
     payload = {'title': new_listing_title}
 
-    r = client.put(f'/listing/edit/{listing_id}', json=payload, headers={"Authorization": "Bearer " + token})
+    r = client.put(f'/listing/edit/{listing_id}', json=payload, headers={"Authorization": "Bearer " + token1})
     assert r.status_code == 200
 
+     # Editing a listing with the wrong listing id
+    new_listing_title = 'newtestlisting2'
+    payload = {'title': new_listing_title}
+
+    r = client.put('/listing/edit/wronglistingid', json=payload, headers={"Authorization": "Bearer " + token1})
+    assert r.status_code == 400
+    assert r.get_json() == 'ERROR: Listing not found'
+
+    # Signing up another user
+    password = '123abcABC'
+    username = 'testuser2'
+    email = 'test2@gmail.com'
+    payload = {'username': username, 'password': password, 'email': email}
+
+    r = client.post('/signup', json=payload, content_type='application/json')
+    
+    # Logging in the new user
+    payload = {'username': username, 'password': password}
+
+    r = client.post('/login', json=payload, content_type='application/json')
+    token2 = r.get_json()['token']
+
+    # Editing the listing with another user
+    new_listing_title = 'newtestlisting2'
+    payload = {'title': new_listing_title}
+
+    r = client.put(f'/listing/edit/{listing_id}', json=payload, headers={"Authorization": "Bearer " + token2})
+    assert r.status_code == 400
+    assert r.get_json() == 'ERROR: You are not the owner of this listing'
+    
 
 def test_delete_listing_page(client):
-    pass
+    # Signing up a user
+    password = '123abcABC'
+    username = 'testuser1'
+    email = 'test1@gmail.com'
+    payload = {'username': username, 'password': password, 'email': email}
+
+    r = client.post('/signup', json=payload, content_type='application/json')
+    
+    # Logging in the user
+    payload = {'username': username, 'password': password}
+
+    r = client.post('/login', json=payload, content_type='application/json')
+    token1 = r.get_json()['token']
+
+    # Adding a listing with all of the optional data
+    listing_title = 'testlisting'
+    price = '123'
+    location = 'testlocation'
+    description = 'testdescription'
+    payload = {'price': price, 'title': listing_title, 'location': location, 'description': description}
+
+    r = client.post('/listing/add', json=payload, headers={"Authorization": "Bearer " + token1})
+    listing_id = r.get_json()['listing_id']
+
+    # Deleting the listing
+    r = client.delete(f'/listing/delete/{listing_id}', headers={"Authorization": "Bearer " + token1})
+    assert r.status_code == 200
+    assert r.get_json()['message'] == 'Listing deleted successfully'
+
+    # Deleting the listing with the wrong listing id
+    r = client.delete('/listing/delete/wronglistingid', headers={"Authorization": "Bearer " + token1})
+    assert r.status_code == 400
+    assert r.get_json() == 'ERROR: Listing was not found.'
+
+    # Signing up another user
+    password = '123abcABC'
+    username = 'testuser2'
+    email = 'test2@gmail.com'
+    payload = {'username': username, 'password': password, 'email': email}
+
+    r = client.post('/signup', json=payload, content_type='application/json')
+    
+    # Logging in the new user
+    payload = {'username': username, 'password': password}
+
+    r = client.post('/login', json=payload, content_type='application/json')
+    token2 = r.get_json()['token']
+
+    # Deleting the listing with another user
+    r = client.delete(f'/listing/delete/{listing_id}', headers={"Authorization": "Bearer " + token2})
+    assert r.status_code == 400
+    assert r.get_json() == 'ERROR: Listing was not found.'
+
 
 def test_listings_page(client):
-    pass
+    # Signing up a user
+    password = '123abcABC'
+    username = 'testuser1'
+    email = 'test1@gmail.com'
+    payload = {'username': username, 'password': password, 'email': email}
+
+    r = client.post('/signup', json=payload, content_type='application/json')
+    
+    # Logging in the user
+    payload = {'username': username, 'password': password}
+
+    r = client.post('/login', json=payload, content_type='application/json')
+    token1 = r.get_json()['token']
+
+    # Getting the listings when there are no listings
+    r = client.get('/listings', headers={"Authorization": "Bearer " + token1})
+    assert r.status_code == 400
+    assert r.get_json() == 'ERROR: No listings found.'
+
+    # Adding a listing with all of the optional data
+    listing_title = 'testlisting1'
+    price = '123'
+    location = 'testlocation'
+    description = 'testdescription'
+    payload = {'price': price, 'title': listing_title, 'location': location, 'description': description}
+
+    r = client.post('/listing/add', json=payload, headers={"Authorization": "Bearer " + token1})
+    listing_id1 = r.get_json()['listing_id']
+
+    # Adding another listing with all of the optional data
+    listing_title = 'testlisting2'
+    price = '123'
+    location = 'testlocation'
+    description = 'testdescription'
+    payload = {'price': price, 'title': listing_title, 'location': location, 'description': description}
+
+    r = client.post('/listing/add', json=payload, headers={"Authorization": "Bearer " + token1})
+    listing_id2 = r.get_json()['listing_id']
+
+    # Getting the listings
+    r = client.get('/listings', headers={"Authorization": "Bearer " + token1})
+    assert r.status_code == 200
+    assert r.get
+
+
+
 
 def test_listing_page(client):
     pass
