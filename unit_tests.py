@@ -403,7 +403,6 @@ def test_listings_page(client):
     # Getting the listings
     r = client.get('/listings', headers={"Authorization": "Bearer " + token1})
     assert r.status_code == 200
-    assert r.get
 
 
 
