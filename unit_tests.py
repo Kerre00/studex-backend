@@ -223,13 +223,13 @@ def test_add_listing_page(client):
 
     r = client.post('/listing/add', json=payload, headers={"Authorization": "Bearer " + token})
 
-    # Adding a listing without the mandatory data
+    # Adding a listing without a title
     price = '123'
     payload = {'price': price}
 
     r = client.post('/listing/add', json=payload, headers={"Authorization": "Bearer " + token})
     assert r.status_code == 400
-    assert r.get_json() == 'ERROR: Listing could not be created'
+    assert r.get_json() == 'ERROR: Title is missing'
 
 
 def test_edit_listing_page(client):

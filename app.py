@@ -169,15 +169,20 @@ def add_listing_page(): #FUNGERAR HALVT KOLLA LISTING_COURSE + LISTING_PROGRAM
     data = request.get_json()
 
     new_listing = Listing(
-        title=data["title"], 
-        price=data["price"], 
+        title=data.get("title"), 
+        price=data.get("price"), 
         owner_id=user["id"],
         location=data.get("location"),
         description=data.get("description"))
-    
+
+    if not new_listing.title:
+        return jsonify("ERROR: Title is missing"), 400
+    if not new_listing.price:
+        return jsonify("ERROR: Price is missing"), 400
+
     if not new_listing:
         return jsonify("ERROR: Listing could not be created"), 400
-    
+
     # new_listing.course = Course.query.filter_by(id=data.get("course_id")).first()
     # new_listing.program = Program.query.filter_by(id=data.get("program_id")).first()
 
