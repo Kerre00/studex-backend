@@ -137,10 +137,13 @@ class User(db.Model):
         """
         This method validates the email.
         """
-        if not email or "@" not in email:
-            raise ValueError("Not a valid email address")
-        if User.query.filter_by(email=email).first():
-            raise ValueError("Email already in use")
+        if not email:
+            raise ValueError("Email address is required")
+        email_pattern = r"^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}$"
+        if not re.match(email_pattern, email):
+            raise ValueError("Invalid email address")
+        if User.query.filter(User.email == email).first() is not None:
+            raise ValueError("Email address is already in use")
         return email
 
     def __repr__(self):
