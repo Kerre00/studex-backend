@@ -2,7 +2,7 @@ from flask import Flask, request, jsonify, redirect
 from flask_sqlalchemy import SQLAlchemy
 from flask_bcrypt import Bcrypt
 from datetime import timezone, datetime, timedelta
-from data_handler import db, User, bcrypt, app, Message, TokenBlocklist, Listing, jwt, Chat, Program, Course, course_listings, program_listings, favorite_listings
+from data_handler import db, User, bcrypt, app, Message, TokenBlocklist, Listing, jwt, Chat, Program, Course, course_listings, program_listings, favorite_listings, init_db
 from flask_jwt_extended import (
 JWTManager, jwt_required, create_access_token, get_jwt, get_jwt_identity
 )
@@ -441,10 +441,66 @@ def all_chats_page(): # FUNGERAR
         return jsonify("ERROR: No chats found."), 400
     return jsonify([chat.serialize() for chat in chats]), 200
 
+# -------------------------------------Initialize courses and programs-------------------------------------
+
+def add_courses_and_programs():
+    # This is the list of courses that are available
+    courses = [
+        {"id": 1, "name": "Biologi"}, 
+        {"id": 2, "name": "Fysik"}, 
+        {"id": 3, "name": "Kemi"}, 
+        {"id": 4, "name": "Matematik"}, 
+        {"id": 5, "name": "Programmering"}, 
+        {"id": 6, "name": "Teknik"}, 
+        {"id": 7, "name": "Språk"}, 
+        {"id": 8, "name": "Historia"}, 
+        {"id": 9, "name": "Geografi"}, 
+        {"id": 10, "name": "Samhällskunskap"}, 
+        {"id": 11, "name": "Religion"}, 
+        {"id": 12, "name": "Ekonomi"}, 
+        {"id": 13, "name": "Juridik"}, 
+        {"id": 14, "name": "Medicin"}, 
+        {"id": 15, "name": "Psykologi"}, 
+        {"id": 16, "name": "Sociologi"}, 
+        {"id": 17, "name": "Filosofi"}, 
+        {"id": 18, "name": "Musik"}, 
+        {"id": 19, "name": "Konst"}, 
+        {"id": 20, "name": "Sport"}, 
+        {"id": 21, "name": "Naturvetenskap"}, 
+        {"id": 22, "name": "Samhällsvetenskap"}, 
+        {"id": 23, "name": "Humaniora"}, 
+        {"id": 24, "name": "Teknik och naturvetenskap"}, 
+        {"id": 25, "name": "Samhällsvetenskap och humaniora"}, 
+        {"id": 26, "name": "Alla ämnen"}
+        ]
+
+    # This is the list of programs that are available
+    programs = [
+        {"id": 1, "name": "Civilingenjör inom mjukvaruteknik"},
+        {"id": 2, "name": "Civilingenjör inom datateknik"},
+        {"id": 3, "name": "Civilingenjör inom datavetenskap"},
+        {"id": 4, "name": "Civilingenjör inom datalogi"},
+        {"id": 5, "name": "Civilingenjör inom industriell ekonomi"},
+        {"id": 6, "name": "Civilingenjör inom maskinteknik"},
+        {"id": 7, "name": "Civilingenjör inom materialvetenskap"},
+        {"id": 8, "name": "Civilingenjör inom teknisk fysik"},
+        {"id": 9, "name": "Civilingenjör inom teknisk matematik"},
+        {"id": 10, "name": "Civilingenjör inom teknisk nanovetenskap"}
+        ]
+
+    # Add the courses to the database
+    for course in courses:
+        db.session.add(Course(name=course["name"]))
+
+    # Add the programs to the database
+    for program in programs:
+        db.session.add(Program(name=program["name"]))
+
 # ----------------------------------------------------------------------------
 
 if __name__ == "__main__":
     app.debug = True
+    # add_courses_and_programs()
     app.run()
 
 
