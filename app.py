@@ -36,7 +36,7 @@ def home_page(): #FUNGERAR
     current_user = get_jwt_identity()
     if current_user:
         return jsonify({"message": "Welcome to Studex!", "status": "You are logged in as {}".format(current_user)}), 200
-    return jsonify({"message": "Welcome to Studex!", "status": "You are not logged in. Please make an account at " + link}), 200
+    return jsonify({"message": "Welcome to Studex!", "status": "You are not logged in. Please make an account."}), 200
 
 # _________________________________________
 # ---------- User authentication ---------- 
