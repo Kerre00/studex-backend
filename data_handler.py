@@ -48,11 +48,11 @@ db = SQLAlchemy(app)
 
 course_listings = db.Table("course_listings", # This is the table that connects the listing and the course
     db.Column("listing_id", db.String(12), db.ForeignKey("listing.id"), primary_key=True),
-    db.Column("course_id", db.String(12), db.ForeignKey("course.id"), primary_key=True))
+    db.Column("course_id", db.Integer, db.ForeignKey("course.id"), primary_key=True))
 
 program_listings = db.Table("program_listings", # This is the table that connects the listing and the program
     db.Column("listing_id", db.String(12), db.ForeignKey("listing.id"), primary_key=True),
-    db.Column("program_id", db.String(12), db.ForeignKey("program.id"), primary_key=True))
+    db.Column("program_id", db.Integer, db.ForeignKey("program.id"), primary_key=True))
 
 favorite_listings = db.Table("favorite_listings", # This is the table that connects the user and the listing
     db.Column("user_id", db.String(12), db.ForeignKey("user.id"), primary_key=True),
@@ -292,7 +292,7 @@ class Message(db.Model):
     timestamp = db.Column(db.DateTime, nullable=False)
     message = db.Column(db.String(140), nullable=False)
     author_id = db.Column(db.String(12), db.ForeignKey('user.id'), nullable=False)
-    chat_id = db.Column(db.Integer, db.ForeignKey("chat.id"), nullable=False)
+    chat_id = db.Column(db.String(12), db.ForeignKey("chat.id"), nullable=False)
 
     def __init__(self, message, author_id, chat_id):
         self.id = secrets.token_hex(12)
