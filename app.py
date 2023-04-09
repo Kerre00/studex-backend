@@ -278,7 +278,7 @@ def unfavourite_listing_page(ListingID): # FUNGERAR
     return jsonify("ERROR: Listing was not found."), 400
 
 @app.route("/listings", methods=["GET"])
-@jwt_required()
+@jwt_required(optional=True)
 def listings_page(): # FUNGERAR
     """
     Function that handles the process of displaying all book listings.
@@ -303,7 +303,7 @@ def favorites_page(): # FUNGERAR
 
 # Show all listings by a specific user
 @app.route("/listings/user/<Username>", methods=["GET"])
-@jwt_required()
+@jwt_required(optional=True)
 def user_listings_page(Username): # FUNGERAR
     """
     Function that handles the process of displaying all book listings by a specific user.
@@ -350,7 +350,7 @@ def search_listings_page(): # FUNGERAR
 
 # Show all listings of a specific program
 @app.route("/listings/program/<ProgramID>", methods=["GET"])
-@jwt_required()
+@jwt_required(optional=True)
 def program_listings_page(ProgramID):
     """
     Function that handles the process of displaying all book listings of a specific program.
@@ -362,7 +362,7 @@ def program_listings_page(ProgramID):
 
 # Show all listings of a specific course
 @app.route("/listings/course/<CourseID>", methods=["GET"])
-@jwt_required()
+@jwt_required(optional=True)
 def course_listings_page(CourseID):
     """
     Function that handles the process of displaying all book listings of a specific course.
@@ -376,21 +376,23 @@ def course_listings_page(CourseID):
 # ---------- Chatting ---------- 
 
 @app.route("/listing/<ListingID>/new_chat", methods=["POST"])
-@jwt_required()
+@jwt_required(optional=True)
 def new_chat_page(ListingID): # FUNGERAR
     """
     Function that handles the process of creating a new chat.
     """
     user = get_jwt_identity()
-    listing = Listing.query.filter_by(id=ListingID).first()
-    if not listing:
-        return jsonify("ERROR: Listing was not found."), 400
-    if listing.owner_id == user["id"]:
-        return jsonify("ERROR: You cannot chat with yourself."), 400
-    new_chat = Chat(buyer_id=user["id"], seller_id=listing.owner_id, listing_id=listing.id)
-    db.session.add(new_chat)
-    db.session.commit()
-    return jsonify({"message": "Chat created successfully", "chat_id": new_chat.id}), 200
+    if user:
+        listing = Listing.query.filter_by(id=ListingID).first()
+        if not listing:
+            return jsonify("ERROR: Listing was not found."), 400
+        if listing.owner_id == user["id"]:
+            return jsonify("ERROR: You cannot chat with yourself."), 400
+        new_chat = Chat(buyer_id=user["id"], seller_id=listing.owner_id, listing_id=listing.id)
+        db.session.add(new_chat)
+        db.session.commit()
+        return jsonify({"message": "Chat created successfully", "chat_id": new_chat.id}), 200
+    return jsonify("ERROR: You must be logged in to chat."), 400
 
 @app.route("/messages/<ChatID>", methods=["GET"])
 @jwt_required()
