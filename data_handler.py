@@ -231,8 +231,6 @@ class Course(db.Model):
     name = db.Column(db.String(80), unique=False)
     program_id = db.Column(db.Integer, db.ForeignKey("program.id"), nullable = False)
 
-    listings = db.relationship("Listing", secondary=course_listings) # Many to many relationship with listings
-
     def __init__(self, name):
         self.name = name
 
@@ -246,7 +244,7 @@ class Program(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(80), unique=True)
 
-    listings = db.relationship("Listing", secondary=program_listings) # Many to many relationship with listings
+    courses = db.relationship("Course", backref=db.backref("program", lazy=True))
 
     def __init__(self, name):
         self.name = name
