@@ -157,6 +157,7 @@ class User(db.Model):
             "first_name": self.first_name,
             "last_name": self.last_name,
             "phone_number": self.phone_number,
+            "created_at": self.created_at
             # "profile_picture": self.profile_picture[0].url if self.profile_picture else None
         }
     
@@ -353,7 +354,7 @@ class TokenBlocklist(db.Model):
 # --------------------------------------DATABASE END--------------------------------------
 
 def init_db():
-    """
+    """o
     This method initializes the database.
     """
     db.drop_all()

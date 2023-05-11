@@ -52,7 +52,7 @@ def login_page(): #FUNGERAR
         #     return jsonify("ERROR: User is already logged in."), 400
         access_token = create_access_token(identity=user.serialize(), expires_delta=timedelta(hours=1))
         user.login()
-        return jsonify({"message": "Successfully logged in", "token": access_token}), 200
+        return jsonify({"message": "Successfully logged in", "token": access_token, "id": user.id}), 200
     return jsonify("ERROR: Invalid username or password."), 401
 
 @app.route("/signup", methods=["POST"])
@@ -77,6 +77,7 @@ def signup_page(): #FUNGERAR
         first_name=data.get("first_name"), 
         last_name=data.get("last_name"), 
         phone_number=data.get("phone_number")
+
     )
     
     db.session.add(new_user)
@@ -389,7 +390,7 @@ def new_chat_page(ListingID): # FUNGERAR
         new_chat = Chat(buyer_id=user["id"], seller_id=listing.owner_id, listing_id=listing.id)
         db.session.add(new_chat)
         db.session.commit()
-        return jsonify({"message": "Chat created successfully", "chat_id": new_chat.id}), 200
+        return jsonify({"message": "Chat created successfully", "chat_id": new_chat.serialize()}), 200
     return jsonify("ERROR: You must be logged in to chat."), 400
 
 @app.route("/messages/<ChatID>", methods=["GET"])
@@ -501,7 +502,7 @@ def add_courses_and_programs():
 if __name__ == "__main__":
     app.debug = True
     # add_courses_and_programs()
-    app.run()
+    app.run(port='5000')
 
 
 # TODO: Add redirect to log-in page if jwt_required sends error.
