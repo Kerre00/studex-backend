@@ -1,4 +1,4 @@
-from flask import Flask, request, jsonify, redirect
+from flask import Flask, request, jsonify
 from flask_sqlalchemy import SQLAlchemy
 from flask_bcrypt import Bcrypt
 from datetime import timezone, datetime, timedelta
@@ -49,11 +49,11 @@ def login_page(): #FUNGERAR
     user = User.query.filter_by(username=data["username"]).first()
     if user and bcrypt.check_password_hash(user.password, data["password"]):
         # if user.is_online():
-        #     return jsonify("ERROR: User is already logged in."), 400
+        #     return jsonify({"message": "User is already logged in."}), 400
         access_token = create_access_token(identity=user.serialize(), expires_delta=timedelta(hours=1))
         user.login()
         return jsonify({"message": "Successfully logged in", "token": access_token, "id": user.id}), 200
-    return jsonify("ERROR: Invalid username or password."), 401
+    return jsonify({"message": "Invalid username or password."}), 401
 
 @app.route("/signup", methods=["POST"])
 def signup_page(): #FUNGERAR
@@ -63,11 +63,11 @@ def signup_page(): #FUNGERAR
     data = request.get_json()
 
     if User.query.filter_by(username=data["username"]).first():
-        return jsonify("ERROR: Username already exists."), 400
+        return jsonify({"message": "Username already exists."}), 400
     if User.query.filter_by(email=data["email"]).first(): 
-        return jsonify("ERROR: Email is already used."), 400
+        return jsonify({"message": "Email is already used."}), 400
     if User.query.filter_by(phone_number=data.get("phone_number")).first() and data.get("phone_number"):
-        return jsonify("ERROR: Phone number is already used."), 400
+        return jsonify({"message": "Phone number is already used."}), 400
 
     # Initialize user with default values for optional arguments
     new_user = User(
@@ -83,7 +83,7 @@ def signup_page(): #FUNGERAR
     db.session.add(new_user)
 
     db.session.commit()
-    return redirect("/login", 200, jsonify({"message": "Successfully signed up"}))
+    return jsonify({"message": "Successfully signed up"}), 200
 
 
 @app.route("/logout", methods=["POST"])
@@ -97,7 +97,7 @@ def logout_page(): #FUNGERAR
     db.session.commit()
     user = User.query.filter_by(id=identity['id']).first()
     user.logout()
-    return redirect("/", 200, jsonify({"message": "Successfully logged out"}))
+    return jsonify({"message": "Successfully logged out"}), 200
 # __________________________________
 # ---------- User profile ----------
  
@@ -145,7 +145,7 @@ def delete_profile_page(): #Remove all user content/data
     db.session.add(TokenBlocklist(jti=get_jwt()["jti"]))
     db.session.delete(user)
     db.session.commit()
-    return redirect("/", 200, jsonify({"message": "Account deleted successfully"}))
+    return jsonify({"message": "Account deleted successfully"}), 200
 
 # _________________________________________
 # ---------- Listings management ---------- 
@@ -167,12 +167,12 @@ def add_listing_page(): #FUNGERAR HALVT KOLLA LISTING_COURSE + LISTING_PROGRAM
         description=data.get("description"))
 
     if not new_listing.title:
-        return jsonify("ERROR: Title is missing"), 400
+        return jsonify({"message": "Title is missing"}), 400
     if not new_listing.price:
-        return jsonify("ERROR: Price is missing"), 400
+        return jsonify({"message": "Price is missing"}), 400
 
     if not new_listing:
-        return jsonify("ERROR: Listing could not be created"), 400
+        return jsonify({"message": "Listing could not be created"}), 400
 
     # new_listing.course = Course.query.filter_by(id=data.get("course_id")).first()
     # new_listing.program = Program.query.filter_by(id=data.get("program_id")).first()
@@ -192,9 +192,9 @@ def edit_listing_page(ListingID): #FUNGERAR HALVT KOLLA LISTING_COURSE + LISTING
     listing = Listing.query.filter_by(id=ListingID).first()
 
     if not listing:
-        return jsonify("ERROR: Listing not found"), 400
+        return jsonify({"message": "Listing not found"}), 400
     if listing.owner_id != user['id']:
-        return jsonify("ERROR: You are not the owner of this listing"), 400
+        return jsonify({"message": "You are not the owner of this listing"}), 400
     data = request.get_json()   
 
     listing.title = data.get("title", listing.title)
@@ -205,8 +205,7 @@ def edit_listing_page(ListingID): #FUNGERAR HALVT KOLLA LISTING_COURSE + LISTING
     # listing.program = data.get("program", listing.program)
 
     db.session.commit()
-    return redirect("/listing/edit/" + ListingID, 200, jsonify(
-        {"message": "Listing updated successfully"}))
+    return jsonify({"message": "Listing updated successfully", "listing_id": listing.id}), 200
 
 
 @app.route("/listing/delete/<ListingID>", methods=["DELETE"])
@@ -221,7 +220,7 @@ def delete_listing_page(ListingID): #FUNGERAR
         db.session.delete(listing)
         db.session.commit()
         return jsonify({"message": "Listing deleted successfully"}), 200
-    return jsonify("ERROR: Listing was not found."), 400
+    return jsonify({"message": "Listing was not found."}), 400
 
 @app.route("/listing/<ListingID>", methods=["GET"])
 @jwt_required(optional=True)
@@ -238,7 +237,7 @@ def listing_page(ListingID): # FUNGERAR
                 user.viewed_listings.append(listing)
                 db.session.commit()
         return jsonify(listing.serialize()), 200
-    return jsonify("ERROR: Listing was not found."), 400
+    return jsonify({"message": "Listing was not found."}), 400
 
 # Add listing to favorites
 @app.route("/listing/<ListingID>/favourite", methods=["POST"])
@@ -252,11 +251,11 @@ def favourite_listing_page(ListingID): # FUNGERAR
     user = User.query.filter_by(id=identity["id"]).first()
     if listing and identity:
         if listing in user.favorites:
-            return jsonify("ERROR: Listing is already in favorites."), 400
+            return jsonify({"message": "Listing is already in favorites."}), 400
         user.favorites.append(listing)
         db.session.commit()
         return jsonify({"message": "Listing added to favorites."}), 200
-    return jsonify("ERROR: Listing was not found."), 400
+    return jsonify({"message": "Listing was not found."}), 400
 
 # Remove listing from favorites
 @app.route("/listing/<ListingID>/favourite", methods=["DELETE"])
@@ -270,11 +269,11 @@ def unfavourite_listing_page(ListingID): # FUNGERAR
     user = User.query.filter_by(id=identity["id"]).first()
     if listing and user:
         if listing not in user.favorites:
-            return jsonify("ERROR: Listing is not in favorites."), 400
+            return jsonify({"message": "Listing is not in favorites."}), 400
         user.favorites.remove(listing)
         db.session.commit()
         return jsonify({"message": "Listing removed from favorites."}), 200
-    return jsonify("ERROR: Listing was not found."), 400
+    return jsonify({"message": "Listing was not found."}), 400
 
 @app.route("/listings", methods=["GET"])
 @jwt_required(optional=True)
@@ -285,7 +284,7 @@ def listings_page(): # FUNGERAR
     listings = Listing.query.all()
     if listings:
         return jsonify([listing.serialize() for listing in listings]), 200
-    return jsonify("ERROR: No listings found."), 400
+    return jsonify({"message": "No listings found."}), 400
 
 # Show all favourite listings
 @app.route("/listings/favorites", methods=["GET"])
@@ -298,7 +297,7 @@ def favorites_page(): # FUNGERAR
     user = User.query.filter_by(id=identity["id"]).first()
     if user and user.favorites:
         return jsonify([listing.serialize() for listing in user.favorites]), 200
-    return jsonify("ERROR: No favorites found."), 400
+    return jsonify({"message": "No favorites found."}), 400
 
 # Show all listings by a specific user
 @app.route("/listings/user/<Username>", methods=["GET"])
@@ -310,7 +309,7 @@ def user_listings_page(Username): # FUNGERAR
     user = User.query.filter_by(username=Username).first()
     if user and user.listings:
         return jsonify([listing.serialize() for listing in user.listings]), 200
-    return jsonify("ERROR: No listings found."), 400
+    return jsonify({"message": "No listings found."}), 400
 
 # Get all listings that have not been viewed by the user
 @app.route("/listings/unviewed", methods=["GET"])
@@ -330,7 +329,7 @@ def unviewed_listings_page(): # FUNGERAR
 
     if user and unviewed_listings:
         return jsonify([listing.serialize() for listing in listings if listing not in user.viewed_listings]), 200
-    return jsonify("ERROR: No unviewed listings found."), 400
+    return jsonify({"message": "No unviewed listings found."}), 400
 
 @app.route("/listings/search", methods=["GET"])
 @jwt_required(optional=True)
@@ -345,7 +344,7 @@ def search_listings_page(): # FUNGERAR
                                            )).all() # Lägg till sökning på program och kurs
     if listings:
         return jsonify([listing.serialize() for listing in listings]), 200
-    return jsonify("ERROR: No listings found."), 400
+    return jsonify({"message": "No listings found."}), 400
 
 # Show all listings of a specific program
 @app.route("/listings/program/<ProgramID>", methods=["GET"])
@@ -357,7 +356,7 @@ def program_listings_page(ProgramID):
     program = Program.query.filter_by(id=ProgramID).first()
     if program:
         return jsonify([listing.serialize() for listing in program.listings]), 200
-    return jsonify("ERROR: No listings found."), 400
+    return jsonify({"message": "No listings found."}), 400
 
 # Show all listings of a specific course
 @app.route("/listings/course/<CourseID>", methods=["GET"])
@@ -369,7 +368,7 @@ def course_listings_page(CourseID):
     course = Course.query.filter_by(id=CourseID).first()
     if course:
         return jsonify([listing.serialize() for listing in course.listings]), 200
-    return jsonify("ERROR: No listings found."), 400
+    return jsonify({"message": "No listings found."}), 400
 
 # ______________________________
 # ---------- Chatting ---------- 
@@ -384,14 +383,14 @@ def new_chat_page(ListingID): # FUNGERAR
     if user:
         listing = Listing.query.filter_by(id=ListingID).first()
         if not listing:
-            return jsonify("ERROR: Listing was not found."), 400
+            return jsonify({"message": "Listing was not found."}), 400
         if listing.owner_id == user["id"]:
-            return jsonify("ERROR: You cannot chat with yourself."), 400
+            return jsonify({"message": "You cannot chat with yourself."}), 400
         new_chat = Chat(buyer_id=user["id"], seller_id=listing.owner_id, listing_id=listing.id)
         db.session.add(new_chat)
         db.session.commit()
         return jsonify({"message": "Chat created successfully", "chat_id": new_chat.serialize()}), 200
-    return jsonify("ERROR: You must be logged in to chat."), 400
+    return jsonify({"message": "You must be logged in to chat."}), 400
 
 @app.route("/messages/<ChatID>", methods=["GET"])
 @jwt_required()
@@ -402,9 +401,9 @@ def chat_page(ChatID): # FUNGERAR
     user = get_jwt_identity()
     chat = Chat.query.filter_by(id=ChatID).first()
     if not chat:
-        return jsonify("ERROR: Chat was not found."), 400
+        return jsonify({"message": "Chat was not found."}), 400
     if chat.buyer_id != user["id"] and chat.seller_id != user["id"]:
-        return jsonify("ERROR: You are not part of this chat."), 400
+        return jsonify({"message": "You are not part of this chat."}), 400
     return jsonify({"messages": chat.serialize()["messages"]}), 200
 
 @app.route("/messages/<ChatID>/send", methods=["POST"])
@@ -416,16 +415,16 @@ def send_message_page(ChatID): # FUNGERAR
     user = get_jwt_identity()
     chat = Chat.query.filter_by(id=ChatID).first()
     if not chat:
-        return jsonify("ERROR: Chat was not found."), 400
+        return jsonify({"message": "Chat was not found."}), 400
     if chat.buyer_id != user["id"] and chat.seller_id != user["id"]:
-        return jsonify("ERROR: You are not part of this chat."), 400
+        return jsonify({"message": "You are not part of this chat."}), 400
     data = request.get_json()
     new_message = Message(
         message=data["message"],
         chat_id=ChatID,
         author_id=user["id"])
     if not new_message:
-        return jsonify("ERROR: Message could not be created"), 400
+        return jsonify({"message": "Message could not be created"}), 400
     db.session.add(new_message)
     db.session.commit()
     return jsonify({"message": "Message sent successfully", "message_id": new_message.id}), 200
@@ -439,7 +438,7 @@ def all_chats_page(): # FUNGERAR
     user = get_jwt_identity()
     chats = Chat.query.filter(db.or_(Chat.buyer_id==user["id"], Chat.seller_id==user["id"])).all()
     if not chats:
-        return jsonify("ERROR: No chats found."), 400
+        return jsonify({"message": "No chats found."}), 400
     return jsonify([chat.serialize() for chat in chats]), 200
 
 # -------------------------------------Initialize courses and programs-------------------------------------

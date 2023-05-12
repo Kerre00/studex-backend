@@ -71,7 +71,7 @@ class User(db.Model):
     username = db.Column(db.String(30), unique=True, nullable=False)
     password = db.Column(db.String(128), nullable=False)
     email = db.Column(db.String(120), unique=True)
-    phone_number = db.Column(db.String(30), nullable=True, unique=True)
+    phone_number = db.Column(db.String(30), nullable=True)
     first_name = db.Column(db.String(50), nullable=True)
     last_name = db.Column(db.String(50), nullable=True)
     last_seen = db.Column(db.DateTime, nullable=True) # The last time the user was seen
@@ -91,7 +91,7 @@ class User(db.Model):
         
         self.id = secrets.token_hex(12)
         self.username = username
-        self.password = bcrypt.generate_password_hash(password).decode('utf-8')
+        self.password = password
         self.email = email
         self.phone_number = phone_number
         self.first_name = first_name
@@ -128,7 +128,7 @@ class User(db.Model):
             if char.islower():
                 low = True
         if dig and upp and low:
-            return password
+            return bcrypt.generate_password_hash(password).decode('utf-8')
         raise ValueError("Password must contain: digit, lower and uppercase")
 
 
@@ -145,6 +145,18 @@ class User(db.Model):
         if User.query.filter(User.email == email).first() is not None:
             raise ValueError("Email address is already in use")
         return email
+    
+
+    @validates("phone_number")
+    def validate_phone_number(self, key, pho_num):
+        """
+        This method validates the phone_number.
+        """
+        # Check if the phone_number is not null
+        if len(pho_num) > 0:
+            if User.query.filter_by(phone_number=pho_num).first():
+                raise ValueError("Phone number is already in use")
+        return pho_num
 
     def __repr__(self):
         return f"{self.username}"
