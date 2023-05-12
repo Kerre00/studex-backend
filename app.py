@@ -240,9 +240,9 @@ def listing_page(ListingID): # FUNGERAR
     return jsonify({"message": "Listing was not found."}), 400
 
 # Add listing to favorites
-@app.route("/listing/<ListingID>/favourite", methods=["POST"])
+@app.route("/listing/<ListingID>/favorite", methods=["POST"])
 @jwt_required()
-def favourite_listing_page(ListingID): # FUNGERAR
+def favorite_listing_page(ListingID): # FUNGERAR
     """
     Function that handles the process of adding a book listing to favorites.
     """
@@ -258,9 +258,9 @@ def favourite_listing_page(ListingID): # FUNGERAR
     return jsonify({"message": "Listing was not found."}), 400
 
 # Remove listing from favorites
-@app.route("/listing/<ListingID>/favourite", methods=["DELETE"])
+@app.route("/listing/<ListingID>/favorite", methods=["DELETE"])
 @jwt_required()
-def unfavourite_listing_page(ListingID): # FUNGERAR
+def unfavorite_listing_page(ListingID): # FUNGERAR
     """
     Function that handles the process of removing a book listing from favorites.
     """
@@ -286,16 +286,16 @@ def listings_page(): # FUNGERAR
         return jsonify([listing.serialize() for listing in listings]), 200
     return jsonify({"message": "No listings found."}), 400
 
-# Show all favourite listings
+# Show all favorite listings
 @app.route("/listings/favorites", methods=["GET"])
 @jwt_required()
 def favorites_page(): # FUNGERAR
     """
-    Function that handles the process of displaying all favourite book listings.
+    Function that handles the process of displaying all favorite book listings.
     """
     identity = get_jwt_identity()
     user = User.query.filter_by(id=identity["id"]).first()
-    if user and user.favorites:
+    if user:
         return jsonify([listing.serialize() for listing in user.favorites]), 200
     return jsonify({"message": "No favorites found."}), 400
 
