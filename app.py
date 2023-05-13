@@ -164,7 +164,8 @@ def add_listing_page(): #FUNGERAR HALVT KOLLA LISTING_COURSE + LISTING_PROGRAM
         price=data.get("price"), 
         owner_id=user["id"],
         location=data.get("location"),
-        description=data.get("description"))
+        description=data.get("description"),
+        image=data.get("image"))
 
     if not new_listing.title:
         return jsonify({"message": "Title is missing"}), 400
@@ -201,6 +202,7 @@ def edit_listing_page(ListingID): #FUNGERAR HALVT KOLLA LISTING_COURSE + LISTING
     listing.price = data.get("price", listing.price)
     listing.location = data.get("location", listing.location)
     listing.description = data.get("description", listing.description)
+    listing.image = data.get("image", listing.image)
     # listing.course = data.get("course", listing.course)
     # listing.program = data.get("program", listing.program)
 

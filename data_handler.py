@@ -208,6 +208,7 @@ class Listing(db.Model):
     location = db.Column(db.String(30), nullable=True)
     description = db.Column(db.String(240), nullable=True)
     created_at = db.Column(db.DateTime, nullable=False)
+    image = db.Column(db.String(1000000), nullable=True)
 
     owner_id = db.Column(db.String(12), db.ForeignKey("user.id"), nullable=False)
     
@@ -216,7 +217,7 @@ class Listing(db.Model):
 
     chats = db.relationship("Chat", backref=db.backref("listing", lazy=True)) 
 
-    def __init__(self, title, location, price=0, description = None, owner_id = None):
+    def __init__(self, title, location, price=0, description = None, owner_id = None, image = None):
         self.id = str(secrets.token_hex(12))
         self.title = title
         self.price = price
@@ -224,6 +225,7 @@ class Listing(db.Model):
         self.description = description
         self.owner_id = owner_id
         self.created_at = datetime.now(timezone.utc)
+        self.image = image
 
     def __repr__(self):
         return f"{self.id}"
@@ -237,6 +239,7 @@ class Listing(db.Model):
             "description": self.description,
             "created_at": self.created_at,
             "owner_id": self.owner_id,
+            "image": self.image
         }
     
 class Course(db.Model):
