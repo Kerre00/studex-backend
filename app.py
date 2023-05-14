@@ -40,13 +40,15 @@ def home_page(): #FUNGERAR
 
 # _________________________________________
 # ---------- User authentication ---------- 
+
 @app.route("/login", methods=["POST"])
 def login_page(): #FUNGERAR
     """
     Function that handles the login process for users.
     """
     data = request.get_json()
-    user = User.query.filter_by(username=data["username"]).first()
+    username = data["username"].lower()
+    user = User.query.filter_by(username=username).first()
     if user and bcrypt.check_password_hash(user.password, data["password"]):
         # if user.is_online():
         #     return jsonify({"message": "User is already logged in."}), 400
@@ -61,8 +63,8 @@ def signup_page(): #FUNGERAR
     Function that handles the signup process for users.
     """
     data = request.get_json()
-
-    if User.query.filter_by(username=data["username"]).first():
+    username = data["username"].lower()
+    if User.query.filter_by(username=username).first():
         return jsonify({"message": "Username already exists."}), 400
     if User.query.filter_by(email=data["email"]).first(): 
         return jsonify({"message": "Email is already used."}), 400
@@ -71,7 +73,7 @@ def signup_page(): #FUNGERAR
 
     # Initialize user with default values for optional arguments
     new_user = User(
-        username=data["username"], 
+        username=username, 
         password=data["password"], 
         email=data["email"], 
         first_name=data.get("first_name"), 
@@ -79,7 +81,7 @@ def signup_page(): #FUNGERAR
         phone_number=data.get("phone_number")
 
     )
-    
+
     db.session.add(new_user)
 
     db.session.commit()
@@ -98,6 +100,7 @@ def logout_page(): #FUNGERAR
     user = User.query.filter_by(id=identity['id']).first()
     user.logout()
     return jsonify({"message": "Successfully logged out"}), 200
+
 # __________________________________
 # ---------- User profile ----------
  
