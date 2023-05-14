@@ -150,6 +150,15 @@ def delete_profile_page(): #Remove all user content/data
     db.session.commit()
     return jsonify({"message": "Account deleted successfully"}), 200
 
+# Get user profile by id
+@app.route("/profile/<user_id>", methods=["GET"])
+def get_user_profile(user_id):
+    """
+    Function that fetches a user profile.
+    """
+    user = User.query.filter_by(id=user_id).first()
+    return jsonify(user.serialize()), 200
+
 # _________________________________________
 # ---------- Listings management ---------- 
 
