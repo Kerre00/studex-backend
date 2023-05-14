@@ -406,7 +406,14 @@ def chat_page(ChatID): # FUNGERAR
         return jsonify({"message": "Chat was not found."}), 400
     if chat.buyer_id != user["id"] and chat.seller_id != user["id"]:
         return jsonify({"message": "You are not part of this chat."}), 400
-    return jsonify({"messages": chat.serialize()["messages"]}), 200
+    
+    messages = Message.query.filter_by(chat_id=ChatID).all()
+
+    if messages:
+        return jsonify([message.serialize() for message in messages]), 200
+    
+    return jsonify({"message": "No messages found."}), 400
+    # return jsonify({"messages": chat.serialize()["messages"]}), 200 -------------------------------------------------------------------------------------
 
 @app.route("/messages/<ChatID>/send", methods=["POST"])
 @jwt_required()
