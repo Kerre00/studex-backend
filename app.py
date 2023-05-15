@@ -127,10 +127,13 @@ def edit_profile_page(): #FUNGERAR
     user = User.query.filter_by(id=identity['id']).first()
     data = request.get_json()
 
-    user.phone_number = data.get("phone_number", user.phone_number)
-    user.first_name = data.get("first_name", user.first_name)
-    user.last_name = data.get("last_name", user.last_name)
-    user.password = data.get("password", user.password)
+    if user.phone_number != data.get("phone_number"):
+        user.phone_number = data.get("phone_number", user.phone_number)
+    if user.first_name != data.get("first_name"):
+        user.first_name = data.get("first_name", user.first_name)
+    if user.last_name != data.get("last_name"):
+        user.last_name = data.get("last_name", user.last_name)
+    # user.password = data.get("password", user.password)
 
     db.session.commit()
     return jsonify({"message": "Profile updated successfully"}), 200
