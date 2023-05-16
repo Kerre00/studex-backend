@@ -96,9 +96,9 @@ def logout_page(): #FUNGERAR
     """
     identity = get_jwt_identity()
     db.session.add(TokenBlocklist(jti=get_jwt()["jti"]))
-    db.session.commit()
     user = User.query.filter_by(id=identity['id']).first()
     user.logout()
+    db.session.commit()
     return jsonify({"message": "Successfully logged out"}), 200
 
 # __________________________________
