@@ -406,7 +406,7 @@ def new_chat_page(ListingID): # FUNGERAR
         new_chat = Chat(buyer_id=user["id"], seller_id=listing.owner_id, listing_id=listing.id)
         db.session.add(new_chat)
         db.session.commit()
-        return jsonify({"message": "Chat created successfully", "chat_id": new_chat.serialize()}), 200
+        return jsonify(new_chat.serialize()), 200
     return jsonify({"message": "You must be logged in to chat."}), 400
 
 @app.route("/messages/<ChatID>", methods=["GET"])
