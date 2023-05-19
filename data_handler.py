@@ -153,9 +153,10 @@ class User(db.Model):
         This method validates the phone_number.
         """
         # Check if the phone_number is not null
-        if len(pho_num) > 0:
-            if User.query.filter_by(phone_number=pho_num).first():
-                raise ValueError("Phone number is already in use")
+        if pho_num:
+            if len(pho_num) > 0:
+                if User.query.filter_by(phone_number=pho_num).first():
+                    raise ValueError("Phone number is already in use")
         return pho_num
 
     def __repr__(self):
