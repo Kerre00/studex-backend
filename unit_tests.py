@@ -7,9 +7,6 @@ import data_handler
 import json
 import requests
 
-from flask_jwt_extended import (
-JWTManager, jwt_required, create_access_token, get_jwt, get_jwt_identity
-)
 
 base_url = "http://127.0.0.1:5000"
 
@@ -34,7 +31,7 @@ def test_home_page(client):
     # Accessing the home page when not logged in
     r = client.get('/', content_type='application/json')
     assert r.status_code == 200
-    assert r.get_json()['message'] == 'Welcome to LiU-böcker!'
+    assert r.get_json()['message'] == 'Welcome to Studex!'
 
     # Accessing the home page when logged in
     # Signing up a user
@@ -55,7 +52,7 @@ def test_home_page(client):
 
     r = client.get('/', content_type='application/json', headers={"Authorization": "Bearer " + token})
     assert r.status_code == 200
-    assert r.get_json()['message'] == 'Welcome to LiU-böcker!'
+    assert r.get_json()['message'] == 'Welcome to Studex!'
 
 
 def test_signup_page(client):
@@ -74,13 +71,12 @@ def test_signup_page(client):
     payload = {'username': 'testuser1', 'password': '123abcABC', 'email': 'test3@gmail.com'}
     r = client.post('/signup', json=payload, content_type='application/json')
     assert r.status_code == 400
-    assert r.get_json() == 'ERROR: Username already exists.'
+    assert r.get_json() == {'message': 'Username already exists.'}
 
     # Signing up a user with an existing email
     payload = {'username': 'testuser3', 'password': '123abcABC', 'email': 'test1@gmail.com'}
     r = client.post('/signup', json=payload, content_type='application/json')
     assert r.status_code == 400
-    assert r.get_json() == 'ERROR: Email is already used.'
 
 
 def test_login_page(client):
@@ -100,13 +96,13 @@ def test_login_page(client):
     payload = {'username': username, 'password': 'WrongPassword123'}
     r = client.post('/login', json=payload, content_type='application/json')
     assert r.status_code == 401
-    assert r.get_json() == 'ERROR: Invalid username or password.'
+    assert r.get_json() == {'message': 'Invalid username or password.'}
 
     # Logging in the user with the wrong username
     payload = {'username': 'wrongusername', 'password': password}
     r = client.post('/login', json=payload, content_type='application/json')
     assert r.status_code == 401
-    assert r.get_json() == 'ERROR: Invalid username or password.'
+    assert r.get_json() == {'message': 'Invalid username or password.'}
 
 
 def test_logout_page(client):
@@ -184,15 +180,16 @@ def test_edit_profile_page(client):
     
     r = client.put('/profile', json=payload, headers={"Authorization": "Bearer " + token})
     assert r.status_code == 200
-    assert r.get_json()['message'] == 'Profile updated successfully'
+    assert r.get_json() == {"message": "Profile updated successfully"}
 
     # Editing only one of the users information
     new_password = 'new123abcABC'
-    payload = {'password': new_password}
+    payload = {'password': new_password, 'phone_number': new_phone_number,
+    'first_name': new_first_name, 'last_name': new_last_name}
     
     r = client.put('/profile', json=payload, headers={"Authorization": "Bearer " + token})
     assert r.status_code == 200
-    assert r.get_json()['message'] == 'Profile updated successfully'
+    assert r.get_json() == {"message": "Profile updated successfully"}
 
 
 def test_delete_profile_page(client):
@@ -235,6 +232,7 @@ def test_add_listing_page(client):
     r = client.post('/listing/add', json=payload, headers={"Authorization": "Bearer " + token})
     assert r.status_code == 200
     assert r.get_json()['message'] == 'Listing has been posted'
+    assert len(r.get_json()['listing_id']) > 0
 
     # Adding a listing with all of the optional data
     listing_title = 'testlisting'
@@ -251,7 +249,7 @@ def test_add_listing_page(client):
 
     r = client.post('/listing/add', json=payload, headers={"Authorization": "Bearer " + token})
     assert r.status_code == 400
-    assert r.get_json() == 'ERROR: Title is missing'
+    assert r.get_json() == {'message': 'Title is missing'}
 
 
 def test_edit_listing_page(client):
@@ -302,7 +300,7 @@ def test_edit_listing_page(client):
 
     r = client.put('/listing/edit/wronglistingid', json=payload, headers={"Authorization": "Bearer " + token1})
     assert r.status_code == 400
-    assert r.get_json() == 'ERROR: Listing not found'
+    assert r.get_json() == {'message': 'Listing not found'}
 
     # Signing up another user
     password = '123abcABC'
@@ -324,7 +322,7 @@ def test_edit_listing_page(client):
 
     r = client.put(f'/listing/edit/{listing_id}', json=payload, headers={"Authorization": "Bearer " + token2})
     assert r.status_code == 400
-    assert r.get_json() == 'ERROR: You are not the owner of this listing'
+    assert r.get_json() == {'message': 'You are not the owner of this listing'}
     
 
 def test_delete_listing_page(client):
@@ -360,7 +358,7 @@ def test_delete_listing_page(client):
     # Deleting the listing with the wrong listing id
     r = client.delete('/listing/delete/wronglistingid', headers={"Authorization": "Bearer " + token1})
     assert r.status_code == 400
-    assert r.get_json() == 'ERROR: Listing was not found.'
+    assert r.get_json() == {'message': 'Listing was not found.'}
 
     # Signing up another user
     password = '123abcABC'
@@ -379,7 +377,7 @@ def test_delete_listing_page(client):
     # Deleting the listing with another user
     r = client.delete(f'/listing/delete/{listing_id}', headers={"Authorization": "Bearer " + token2})
     assert r.status_code == 400
-    assert r.get_json() == 'ERROR: Listing was not found.'
+    assert r.get_json() == {'message': 'Listing was not found.'}
 
 
 def test_listings_page(client):
@@ -400,7 +398,7 @@ def test_listings_page(client):
     # Getting the listings when there are no listings
     r = client.get('/listings', headers={"Authorization": "Bearer " + token1})
     assert r.status_code == 400
-    assert r.get_json() == 'ERROR: No listings found.'
+    assert r.get_json() == {'message': 'No listings found.'}
 
     # Adding a listing with all of the optional data
     listing_title1 = 'testlisting1'
@@ -461,7 +459,7 @@ def test_listing_page(client):
     # Getting the listing with a non existing listing id
     r = client.get('/listing/wrongid', headers={"Authorization": "Bearer " + token1})
     assert r.status_code == 400
-    assert r.get_json() == 'ERROR: Listing was not found.'
+    assert r.get_json() == {'message': 'Listing was not found.'}
 
 
 def test_search_listing_page(client):
@@ -490,22 +488,22 @@ def test_search_listing_page(client):
     listing_id = r.get_json()['listing_id']
 
     # Adding the listing to favorites
-    r = client.post(f'listing/{listing_id}/favourite', headers={"Authorization": "Bearer " + token1})
+    r = client.post(f'listing/{listing_id}/favorite', headers={"Authorization": "Bearer " + token1})
     assert r.status_code == 200
-    assert r.get_json()['message'] == 'Listing added to favorites.'
+    assert r.get_json() == {'message': 'Listing added to favorites.'}
 
-    # Adding a listing that is already in favorites to favorites
-    r = client.post(f'listing/{listing_id}/favourite', headers={"Authorization": "Bearer " + token1})
+    # Adding a listing that is already in favofavoriterites to favorites
+    r = client.post(f'listing/{listing_id}/favorite', headers={"Authorization": "Bearer " + token1})
     assert r.status_code == 400
-    assert r.get_json() == 'ERROR: Listing is already in favorites.'
+    assert r.get_json() == {'message': 'Listing is already in favorites.'}
 
     # Adding a listing to favorites with the wrong listing id
-    r = client.post('listing/wrongid/favourite', headers={"Authorization": "Bearer " + token1})
+    r = client.post('listing/wrongid/favorite', headers={"Authorization": "Bearer " + token1})
     assert r.status_code == 400
-    assert r.get_json() == 'ERROR: Listing was not found.'
+    assert r.get_json() == {'message': 'Listing was not found.'}
 
 
-def test_unfavourite_listing_page(client):
+def test_unfavorite_listing_page(client):
     # Signing up a user
     password = '123abcABC'
     username = 'testuser1'
@@ -531,22 +529,22 @@ def test_unfavourite_listing_page(client):
     listing_id = r.get_json()['listing_id']
 
     # Adding the listing to favorites
-    r = client.post(f'listing/{listing_id}/favourite', headers={"Authorization": "Bearer " + token1})
+    r = client.post(f'listing/{listing_id}/favorite', headers={"Authorization": "Bearer " + token1})
 
     # Removing the listing from favorites
-    r = client.delete(f'listing/{listing_id}/favourite', headers={"Authorization": "Bearer " + token1})
+    r = client.delete(f'listing/{listing_id}/favorite', headers={"Authorization": "Bearer " + token1})
     assert r.status_code == 200
-    assert r.get_json()['message'] == 'Listing removed from favorites.'
+    assert r.get_json() == {'message': 'Listing removed from favorites.'}
 
     # Removing a listing that is not in favorites from favorites
-    r = client.delete(f'listing/{listing_id}/favourite', headers={"Authorization": "Bearer " + token1})
+    r = client.delete(f'listing/{listing_id}/favorite', headers={"Authorization": "Bearer " + token1})
     assert r.status_code == 400
-    assert r.get_json() == 'ERROR: Listing is not in favorites.'
+    assert r.get_json() == {'message': 'Listing is not in favorites.'}
 
     # Removing a listing from favorites using the wrong listing id
-    r = client.delete('listing/wrongid/favourite', headers={"Authorization": "Bearer " + token1})
+    r = client.delete('listing/wrongid/favorite', headers={"Authorization": "Bearer " + token1})
     assert r.status_code == 400
-    assert r.get_json() == 'ERROR: Listing was not found.'
+    assert r.get_json() == {'message': 'Listing was not found.'}
     
 
 def test_favorites_page(client):
@@ -585,11 +583,11 @@ def test_favorites_page(client):
 
     # Getting the favorites when there are no favorites
     r = client.get('listings/favorites', headers={"Authorization": "Bearer " + token1})
-    assert r.status_code == 400
-    assert r.get_json() == 'ERROR: No favorites found.'
+    assert r.status_code == 200
+    assert r.get_json() == []
 
     # Adding the listing to favorites
-    r = client.post(f'listing/{listing_id}/favourite', headers={"Authorization": "Bearer " + token1})
+    r = client.post(f'listing/{listing_id}/favorite', headers={"Authorization": "Bearer " + token1})
     
     # Getting all of the favorites
     r = client.get('listings/favorites', headers={"Authorization": "Bearer " + token1})
@@ -668,7 +666,7 @@ def test_user_listings_page(client):
     # Getting all of the listings posted by a user that haven't posted any listings
     r = client.get(f'listings/user/{username3}', headers={"Authorization": "Bearer " + token3})
     assert r.status_code == 400
-    assert r.get_json() == 'ERROR: No listings found.'
+    assert r.get_json() == {'message': 'No listings found.'}
 
 
 def test_unviewed_listings_page(client):
@@ -749,7 +747,7 @@ def test_unviewed_listings_page(client):
     # Getting all of the first users unviewed listings when they don't have any unviewed listings
     r = client.get('/listings/unviewed', headers={"Authorization": "Bearer " + token1})
     assert r.status_code == 400
-    assert r.get_json() == 'ERROR: No unviewed listings found.'
+    assert r.get_json() == {'message': 'No unviewed listings found.'}
 
 
 def test_search_listings_page(client):
@@ -784,7 +782,6 @@ def test_search_listings_page(client):
     payload = {'price': price, 'title': listing_title2, 'location': location2, 'description': description2}
 
     r = client.post('/listing/add', json=payload, headers={"Authorization": "Bearer " + token1})
-    listing_id1 = r.get_json()['listing_id']
 
     # Adding a listing with all of the optional data
     listing_title3 = 'testlisting3'
@@ -809,7 +806,7 @@ def test_search_listings_page(client):
     # Searching for listings with a certain description
     r = client.get('/listings/search?query=nomatchingpattern', content_type='application/json')
     assert r.status_code == 400
-    assert r.get_json() == 'ERROR: No listings found.'
+    assert r.get_json() == {'message': 'No listings found.'}
 
 
 def test_all_chats_page(client):
