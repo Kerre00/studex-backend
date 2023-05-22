@@ -71,7 +71,18 @@ def signup_page(): #FUNGERAR
     if User.query.filter_by(phone_number=data.get("phone_number")).first() and data.get("phone_number"):
         return jsonify({"message": "Phone number is already used."}), 400
 
+    
+
+    password = data["password"]
+    if len(password) < 8:
+        return jsonify({"message": "Password must be at least 8 characters long."}), 400
+    if not any(char.isdigit() for char in password):
+        return jsonify({"message": "Password must contain at least one number."}), 400
+    if not any(char.isupper() for char in password):
+        return jsonify({"message": "Password must contain at least one uppercase letter."}), 400
+    
     # Initialize user with default values for optional arguments
+    
     new_user = User(
         username=username, 
         password=data["password"], 
@@ -79,7 +90,6 @@ def signup_page(): #FUNGERAR
         first_name=data.get("first_name"), 
         last_name=data.get("last_name"), 
         phone_number=data.get("phone_number")
-
     )
 
     db.session.add(new_user)
@@ -182,9 +192,9 @@ def add_listing_page(): #FUNGERAR HALVT KOLLA LISTING_COURSE + LISTING_PROGRAM
         description=data.get("description"),
         image=data.get("image"))
 
-    if not new_listing.title:
+    if new_listing.title is None:
         return jsonify({"message": "Title is missing"}), 400
-    if not new_listing.price:
+    if new_listing.price is None:
         return jsonify({"message": "Price is missing"}), 400
 
     if not new_listing:
