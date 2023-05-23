@@ -80,8 +80,8 @@ def signup_page():
         return jsonify({"message": "Username already exists."}), 400
     if not username.isalnum():
         return jsonify({"message": "Username must only contain letters and numbers."}), 400
-    if len(username) > 20:
-        return jsonify({"message": "Username must be at most 20 characters long."}), 400
+    if len(username) > 20 or len(username) < 3:
+        return jsonify({"message": "Username must be between 3 and 20 characters long."}), 400
     
     # Check if password is valid        
     password = data["password"]
@@ -191,7 +191,7 @@ def edit_profile_page():
 
     if user.first_name != data.get("first_name"):
         valid_first_name = data.get("first_name").replace(" ", "").replace("-", "").isalpha()
-        if data.get("first_name") and not valid_first_name.isalpha():
+        if data.get("first_name") and valid_first_name.isalpha():
             return jsonify({"message": "First name must only contain letters."}), 400
         if data.get("first_name") and len(data.get("first_name")) > 20:
             return jsonify({"message": "First name must be at most 20 characters long."}), 400
