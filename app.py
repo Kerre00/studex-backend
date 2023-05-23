@@ -188,7 +188,7 @@ def edit_profile_page():
         user.phone_number = data.get("phone_number", user.phone_number)
 
     if user.first_name != data.get("first_name"):
-        if data.get("first_name") and data.get("first_name").isalpha():
+        if data.get("first_name") and not data.get("first_name").isalpha():
             return jsonify({"message": "First name must only contain letters."}), 400
         if data.get("first_name") and len(data.get("first_name")) > 20:
             return jsonify({"message": "First name must be at most 20 characters long."}), 400
@@ -250,7 +250,7 @@ def add_listing_page():
         description=data.get("description"),
         image=data.get("image"))
 
-    if new_listing.title is None:
+    if new_listing.title is None or len(new_listing) == 0:
         return jsonify({"message": "Title is missing"}), 400
     if new_listing.title and len(new_listing.title) > 30:
         return jsonify({"message": "Title must be at most 30 characters long."}), 400
@@ -260,8 +260,6 @@ def add_listing_page():
         return jsonify({"message": "Location must be at most 150 characters long."}), 400
     if new_listing.price is None:
         return jsonify({"message": "Price is missing"}), 400
-    if new_listing.price and not new_listing.price.isdigit():
-        return jsonify({"message": "Price must only contain numbers."}), 400
     if new_listing.price and new_listing.price < 0 or new_listing.price > 999999:
         return jsonify({"message": "Price must be between 0 and 999999 kr."}), 400
     if not new_listing:
