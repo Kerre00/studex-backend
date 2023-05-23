@@ -297,8 +297,6 @@ def edit_listing_page(ListingID):
         return jsonify({"message": "Description must be at most 240 characters long."}), 400
     if listing.location and len(listing.location) > 150:
         return jsonify({"message": "Location must be at most 150 characters long."}), 400
-    if listing.price and not listing.price.isdigit():
-        return jsonify({"message": "Price must only contain numbers."}), 400
     if listing.price and listing.price < 0 or listing.price > 999999:
         return jsonify({"message": "Price must be between 0 and 999999 kr."}), 400
 
