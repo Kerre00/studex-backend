@@ -96,16 +96,14 @@ def signup_page():
     
     # Check if first name is valid
     first_name=data.get("first_name")
-    valid_first_name = first_name.replace(" ", "").replace("-", "").isalpha()
-    if first_name and not valid_first_name.isalpha():
+    if first_name and not first_name.isalpha():
         return jsonify({"message": "First name must only contain letters."}), 400
     if first_name and len(first_name) > 20:
         return jsonify({"message": "First name must be at most 20 characters long."}), 400
     
     # Check if last name is valid
     last_name=data.get("last_name")
-    valid_last_name = last_name.replace(" ", "").replace("-", "").isalpha()
-    if last_name and not valid_last_name.isalpha():
+    if last_name and not last_name.isalpha():
         return jsonify({"message": "Last name must only contain letters."}), 400
     if last_name and len(last_name) > 30:
         return jsonify({"message": "Last name must be at most 30 characters long."}), 400
@@ -190,16 +188,14 @@ def edit_profile_page():
         user.phone_number = data.get("phone_number", user.phone_number)
 
     if user.first_name != data.get("first_name"):
-        valid_first_name = data.get("first_name").replace(" ", "").replace("-", "").isalpha()
-        if data.get("first_name") and valid_first_name.isalpha():
+        if data.get("first_name") and data.get("first_name").isalpha():
             return jsonify({"message": "First name must only contain letters."}), 400
         if data.get("first_name") and len(data.get("first_name")) > 20:
             return jsonify({"message": "First name must be at most 20 characters long."}), 400
         user.first_name = data.get("first_name", user.first_name)
 
     if user.last_name != data.get("last_name"):
-        valid_last_name = data.get("last_name").replace(" ", "").replace("-", "").isalpha()
-        if data.get("last_name") and not valid_last_name.isalpha():
+        if data.get("last_name") and not data.get("last_name").isalpha():
             return jsonify({"message": "Last name must only contain letters."}), 400
         if data.get("last_name") and len(data.get("last_name")) > 30:
             return jsonify({"message": "Last name must be at most 30 characters long."}), 400
