@@ -122,12 +122,12 @@ def signup_page():
     # Check if email is valid
     email=data.get("email")
     if not email:
-        raise ValueError("Email address is required.")
+        return jsonify({"message": "Email is required."}), 400
     email_pattern = r"^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}$"
     if not re.match(email_pattern, email):
-        raise ValueError("Invalid email address.")
-    if User.query.filter(User.email == email).first() is not None:
-        raise ValueError("Email is already in use.")
+        return jsonify({"message": "Email is invalid."}), 400
+    if User.query.filter(User.email == email).first() is not None: 
+        return jsonify({"message": "Email is already used."}), 400
 
     new_user = User(username=username, 
                     password=data["password"], 
