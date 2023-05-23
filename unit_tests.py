@@ -1,12 +1,10 @@
 import os
 import tempfile
+
 import pytest
+
 import app
 import data_handler
-
-import json
-import requests
-
 
 base_url = "http://127.0.0.1:5000"
 

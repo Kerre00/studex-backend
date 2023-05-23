@@ -62,6 +62,7 @@ viewed_listings = db.Table("viewed_listings", # This is the table that connects 
     db.Column("user_id", db.String(12), db.ForeignKey("user.id"), primary_key=True),
     db.Column("listing_id", db.String(12), db.ForeignKey("listing.id"), primary_key=True))
 
+
 class User(db.Model):
     """
     This class represents the user model.
@@ -74,18 +75,16 @@ class User(db.Model):
     phone_number = db.Column(db.String(30), nullable=True)
     first_name = db.Column(db.String(50), nullable=True)
     last_name = db.Column(db.String(50), nullable=True)
-    last_seen = db.Column(db.DateTime, nullable=True) # The last time the user was seen
-    online = db.Column(db.Boolean, nullable=False) # If the user is online or not
+    last_seen = db.Column(db.DateTime, nullable=True)
+    online = db.Column(db.Boolean, nullable=False)
 
-    listings = db.relationship("Listing", backref=db.backref("owner", lazy=True)) # Owner of the listing
+    listings = db.relationship("Listing", backref=db.backref("owner", lazy=True))
     
-    chats_as_buyer = db.relationship("Chat", backref=db.backref("buyer", lazy=True), foreign_keys="Chat.buyer_id") # Chats as buyer
-    chats_as_seller = db.relationship("Chat", backref=db.backref("seller", lazy=True), foreign_keys="Chat.seller_id") # Chats as seller
+    chats_as_buyer = db.relationship("Chat", backref=db.backref("buyer", lazy=True), foreign_keys="Chat.buyer_id")
+    chats_as_seller = db.relationship("Chat", backref=db.backref("seller", lazy=True), foreign_keys="Chat.seller_id")
 
-    favorites = db.relationship("Listing", secondary=favorite_listings, backref=db.backref("favorited_by", lazy=True)) # Users favorite listings
-    viewed_listings = db.relationship("Listing", secondary=viewed_listings, backref=db.backref("viewed_by", lazy=True)) # Users viewed listings
-
-    # profile_picture = db.relationship("Image", uselist=False, backref=db.backref("user", lazy=True)) # Profile picture
+    favorites = db.relationship("Listing", secondary=favorite_listings, backref=db.backref("favorited_by", lazy=True))
+    viewed_listings = db.relationship("Listing", secondary=viewed_listings, backref=db.backref("viewed_by", lazy=True))
 
     def __init__(self, username, password, email, phone_number=None, first_name=None, last_name=None, online=False):
         
@@ -111,7 +110,6 @@ class User(db.Model):
             raise ValueError("Username can only contain: A-ö, a-ö or 0-9")
         return username
     
-
     @validates("password")
     def validate_password(self, key, password):
         """
@@ -131,7 +129,6 @@ class User(db.Model):
             return bcrypt.generate_password_hash(password).decode('utf-8')
         raise ValueError("Password must contain: digit, lower and uppercase")
 
-
     @validates("email")
     def validate_email(self, key, email):
         """
@@ -146,13 +143,11 @@ class User(db.Model):
             raise ValueError("Email address is already in use")
         return email
     
-
     @validates("phone_number")
     def validate_phone_number(self, key, pho_num):
         """
         This method validates the phone_number.
         """
-        # Check if the phone_number is not null
         if pho_num:
             if len(pho_num) > 0:
                 if User.query.filter_by(phone_number=pho_num).first():
@@ -171,7 +166,6 @@ class User(db.Model):
             "last_name": self.last_name,
             "phone_number": self.phone_number,
             "created_at": self.created_at
-            # "profile_picture": self.profile_picture[0].url if self.profile_picture else None
         }
     
     def login(self):
@@ -197,7 +191,8 @@ class User(db.Model):
         if self.last_seen is None:
             return False
         now = datetime.now(timezone.utc)
-        return (now - self.last_seen) < timedelta(minutes=10) # If the user was last seen less than 10 minutes ago, consider them online
+        # If the user was last seen lessthan 10 minutes ago, consider them online
+        return (now - self.last_seen) < timedelta(minutes=10) 
     
 class Listing(db.Model):
     """
@@ -243,6 +238,7 @@ class Listing(db.Model):
             "image": self.image
         }
     
+    
 class Course(db.Model):
     """
     This class represents the course search category model.
@@ -256,6 +252,7 @@ class Course(db.Model):
 
     def __repr__(self):
         return f"{self.name}"
+    
 
 class Program(db.Model):
     """
@@ -271,6 +268,7 @@ class Program(db.Model):
 
     def __repr__(self):
         return f"{self.name}"
+    
 
 class Chat(db.Model):
     """
@@ -281,7 +279,7 @@ class Chat(db.Model):
     buyer_id = db.Column(db.String(12), db.ForeignKey("user.id"), nullable = False)
     seller_id = db.Column(db.String(12), db.ForeignKey("user.id"), nullable = False)
 
-    messages = db.relationship("Message", backref=db.backref("chat", lazy=True)) # One to many relationship with messages
+    messages = db.relationship("Message", backref=db.backref("chat", lazy=True))
 
     def __init__(self, listing_id, buyer_id, seller_id, messages = []):
         self.id = secrets.token_hex(12)
@@ -301,6 +299,7 @@ class Chat(db.Model):
             "seller_id": self.seller_id,
             "messages": [message.serialize() for message in self.messages]
         }
+    
 
 class Message(db.Model):
     """
@@ -331,15 +330,6 @@ class Message(db.Model):
             "chat_id": self.chat_id
         }
 
-# class Image(db.Model):
-#     """
-#     This class represents the image model.
-#     """
-#     id = db.Column(db.Integer, primary_key=True)
-#     filename = db.Column(db.String(120), nullable=False)
-#     created_at = db.Column(db.DateTime, nullable=False, default=db.func.now())
-#     listing_id = db.Column(db.Integer, db.ForeignKey('listing.id'))
-#     user_id = db.Column(db.String(12), db.ForeignKey('user.id'))
 
 class TokenBlocklist(db.Model):
     """
