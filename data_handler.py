@@ -62,7 +62,6 @@ viewed_listings = db.Table("viewed_listings", # This is the table that connects 
     db.Column("user_id", db.String(12), db.ForeignKey("user.id"), primary_key=True),
     db.Column("listing_id", db.String(12), db.ForeignKey("listing.id"), primary_key=True))
 
-
 class User(db.Model):
     """
     This class represents the user model.

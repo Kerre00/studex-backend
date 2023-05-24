@@ -260,7 +260,7 @@ def add_listing_page():
         return jsonify({"message": "Location must be at most 150 characters long."}), 400
     if new_listing.price is None:
         return jsonify({"message": "Price is missing"}), 400
-    if new_listing.price and len(new_listing.price) < 0 or len(new_listing.price) > 6:
+    if new_listing.price and new_listing.price < 0 or new_listing.price > 999999:
         return jsonify({"message": "Price must be between 0 and 999999 kr."}), 400
     if not new_listing:
         return jsonify({"message": "Listing could not be created"}), 400
@@ -330,14 +330,31 @@ def listing_page(ListingID):
     identity = get_jwt_identity()
     listing = Listing.query.filter_by(id=ListingID).first()
     if listing:
-        if identity:
-            user = User.query.filter_by(id=identity["id"]).first()
-            if listing not in user.viewed_listings:
-                user.viewed_listings.append(listing)
-                db.session.commit()
+        # if identity:
+        #     user = User.query.filter_by(id=identity["id"]).first()
+        #     if listing not in user.viewed_listings:
+        #         user.viewed_listings.append(listing)
+        #         db.session.commit()
+        #         print("Listing added to viewed listings")
         return jsonify(listing.serialize()), 200
     return jsonify({"message": "Listing was not found."}), 400
 
+@app.route("/listing/<ListingID>/view", methods=["POST"])
+@jwt_required()
+def view_listing_page(ListingID):
+    """
+    Function that handles the process of adding a book listing to viewed listings.
+    """
+    listing = Listing.query.filter_by(id=ListingID).first()
+    identity = get_jwt_identity()
+    user = User.query.filter_by(id=identity["id"]).first()
+    if listing and identity:
+        if listing in user.viewed_listings:
+            return jsonify({"message": "Listing is already in viewed listings."}), 400
+        user.viewed_listings.append(listing)
+        db.session.commit()
+        return jsonify({"message": "Listing added to viewed listings."}), 200
+    return jsonify({"message": "Listing was not found."}), 400
 
 @app.route("/listing/<ListingID>/favorite", methods=["POST"])
 @jwt_required()
@@ -414,23 +431,35 @@ def user_listings_page(Username):
 
 @app.route("/listings/unviewed", methods=["GET"])
 @jwt_required()
-def unviewed_listings_page(): 
+def unviewed_listings_page():
     """
-    Function that handles the process of displaying all book listings that 
+    Function that handles the process of displaying all book listings that
     have not been viewed by the user.
     """
     identity = get_jwt_identity()
     user = User.query.filter_by(id=identity["id"]).first()
-    listings = Listing.query.all()
-    unviewed_listings = []
-    for listing in listings:
-        if listing not in user.viewed_listings:
-            unviewed_listings.append(listing)
+    unviewed_listings = Listing.query.filter(~Listing.viewed_by.contains(user)).all()
 
-    if user and unviewed_listings:
-        return jsonify([listing.serialize() for listing in listings if listing not in user.viewed_listings]), 200
-    return jsonify({"message": "No unviewed listings found."}), 400
+    if unviewed_listings:
+        return jsonify([listing.serialize() for listing in unviewed_listings]), 200
 
+    return jsonify({"message": "No unviewed listings found."}), 200
+
+@app.route("/listings/viewed", methods=["GET"])
+@jwt_required()
+def viewed_listings_page():
+    """
+    Function that handles the process of displaying all book listings that
+    have been viewed by the user.
+    """
+    identity = get_jwt_identity()
+    user = User.query.filter_by(id=identity["id"]).first()
+    viewed_listings = user.viewed_listings
+
+    if viewed_listings:
+        return jsonify([listing.serialize() for listing in viewed_listings]), 200
+
+    return jsonify({"message": "No viewed listings found."}), 200
 
 @app.route("/listings/search", methods=["GET"])
 @jwt_required(optional=True)
