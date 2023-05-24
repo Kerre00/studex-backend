@@ -250,7 +250,7 @@ def add_listing_page():
         description=data.get("description"),
         image=data.get("image"))
 
-    if new_listing.title is None or len(new_listing) == 0:
+    if new_listing.title is None or len(new_listing.title) == 0:
         return jsonify({"message": "Title is missing"}), 400
     if new_listing.title and len(new_listing.title) > 30:
         return jsonify({"message": "Title must be at most 30 characters long."}), 400
@@ -260,7 +260,7 @@ def add_listing_page():
         return jsonify({"message": "Location must be at most 150 characters long."}), 400
     if new_listing.price is None:
         return jsonify({"message": "Price is missing"}), 400
-    if new_listing.price and new_listing.price < 0 or new_listing.price > 999999:
+    if new_listing.price and len(new_listing.price) < 0 or len(new_listing.price) > 6:
         return jsonify({"message": "Price must be between 0 and 999999 kr."}), 400
     if not new_listing:
         return jsonify({"message": "Listing could not be created"}), 400
@@ -286,7 +286,7 @@ def edit_listing_page(ListingID):
     data = request.get_json()   
 
     listing.title = data.get("title", listing.title)
-    listing.price = data.get("price", listing.price)
+    listing.price = str(data.get("price", listing.price))
     listing.location = data.get("location", listing.location)
     listing.description = data.get("description", listing.description)
     listing.image = data.get("image", listing.image)
@@ -297,7 +297,7 @@ def edit_listing_page(ListingID):
         return jsonify({"message": "Description must be at most 240 characters long."}), 400
     if listing.location and len(listing.location) > 150:
         return jsonify({"message": "Location must be at most 150 characters long."}), 400
-    if listing.price and listing.price < 0 or listing.price > 999999:
+    if listing.price and len(listing.price) < 0 or len(listing.price) > 6:
         return jsonify({"message": "Price must be between 0 and 999999 kr."}), 400
 
     db.session.commit()
@@ -313,7 +313,7 @@ def delete_listing_page(ListingID):
     listing = Listing.query.filter_by(id=ListingID).first()
     identity = get_jwt_identity()
     if listing:
-        if listing.owner_id == identity['id']:
+        if listing.owner_id != identity['id']:
             return jsonify({"message": "You are not the owner of this listing"}), 400
         db.session.delete(listing)
         db.session.commit()
