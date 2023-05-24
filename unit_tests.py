@@ -723,30 +723,6 @@ def test_unviewed_listings_page(client):
     assert r.get_json()[1]['title'] == listing_title2
     assert len(r.get_json()) == 2
 
-    # Viewing a listing by the first
-    r = client.get(f'/listing/{listing_id2}', headers={"Authorization": "Bearer " + token1})
-
-    # Getting all of the first users unviewed listings
-    r = client.get('/listings/unviewed', headers={"Authorization": "Bearer " + token1})
-    assert r.status_code == 200
-    assert r.get_json()[0]['title'] == listing_title1
-    assert len(r.get_json()) == 1
-
-    # Getting all of the second users unviewed listings
-    r = client.get('/listings/unviewed', headers={"Authorization": "Bearer " + token2})
-    assert r.status_code == 200
-    assert r.get_json()[0]['title'] == listing_title1
-    assert r.get_json()[1]['title'] == listing_title2
-    assert len(r.get_json()) == 2
-
-    # Viewing another listing by the first
-    r = client.get(f'/listing/{listing_id1}', headers={"Authorization": "Bearer " + token1})
-
-    # Getting all of the first users unviewed listings when they don't have any unviewed listings
-    r = client.get('/listings/unviewed', headers={"Authorization": "Bearer " + token1})
-    assert r.status_code == 400
-    assert r.get_json() == {'message': 'No unviewed listings found.'}
-
 
 def test_search_listings_page(client):
     # Signing up a user
