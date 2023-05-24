@@ -260,8 +260,6 @@ def add_listing_page():
         return jsonify({"message": "Location must be at most 150 characters long."}), 400
     if new_listing.price is None:
         return jsonify({"message": "Price is missing"}), 400
-    if new_listing.price and len(new_listing.price) < 0 or len(new_listing.price) > 6:
-        return jsonify({"message": "Price must be between 0 and 999999 kr."}), 400
     if not new_listing:
         return jsonify({"message": "Listing could not be created"}), 400
 
